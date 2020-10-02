@@ -7,11 +7,13 @@ Imports System.ComponentModel
 Imports Controls
 
 Public Enum NodeRegion
+    None
     Expander
     Favorite
     CheckBox
     Image
     Node
+    Field
 End Enum
 Public Class HitRegion
     Implements IEquatable(Of HitRegion)
@@ -302,11 +304,6 @@ Public Class TreeViewer
                                     e.Graphics.FillPolygon(Brushes.DarkOrange, trianglePoints.ToArray)
                                     mouseInTip = InTriangle(MousePoint, trianglePoints.ToArray)
                                 End If
-                                Dim SelectionBounds As New Rectangle(.ImageBounds.Left, .Bounds.Top, .Bounds.Right - { .FavoriteBounds.Left, .ExpandCollapseBounds.Left}.Min, .Bounds.Height)
-                                Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is Node, DropHighlightColor, .BackColor))
-                                    SelectionBounds.Inflate(-1, -1)
-                                    e.Graphics.FillRectangle(Brush, SelectionBounds)
-                                End Using
                                 If .Image IsNot Nothing Then e.Graphics.DrawImage(.Image, .ImageBounds)
                                 TextRenderer.DrawText(e.Graphics,
                                                       If(mouseInTip, .TipText, .Text),
@@ -321,6 +318,11 @@ Public Class TreeViewer
                                     End Using
                                 End If
                                 If .Selected Then
+                                    Dim SelectionBounds = .Bounds  'As New Rectangle(.ImageBounds.Left, .Bounds.Top, .Bounds.Right - { .FavoriteBounds.Left, .ExpandCollapseBounds.Left}.Min, .Bounds.Height)
+                                    Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is Node, DropHighlightColor, .BackColor))
+                                        SelectionBounds.Inflate(-1, -1)
+                                        e.Graphics.FillRectangle(Brush, SelectionBounds)
+                                    End Using
                                     Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, SelectionColor))
                                         e.Graphics.FillRectangle(SemiTransparentBrush, SelectionBounds)
                                         SelectionBounds.Inflate(1, 1)
@@ -362,18 +364,33 @@ Public Class TreeViewer
                                         }
                                         e.Graphics.DrawRectangle(dottedPen, nodeColumnBounds)
                                         For Each fieldNode In .Fields
-                                            leftWidth = Node_LeftWidth(fieldNode.HeaderLevel, fieldNode.ColumnIndex)
-                                            nodeColumnBounds = New Rectangle(leftWidth.First - HScroll.Value, .Bounds.Top, leftWidth.Last, .Bounds.Height)
-                                            fieldNode._Bounds = nodeColumnBounds
-                                            If nodeColumnBounds.Left >= Width Then Exit For
-                                            TextRenderer.DrawText(e.Graphics,
-                                                        fieldNode.Text,
-                                                        fieldNode.Font,
-                                                        nodeColumnBounds,
-                                                        fieldNode.ForeColor,
-                                                        fieldNode.TextBackColor,
-                                                        TextFormatFlags.LeftAndRightPadding Or TextFormatFlags.NoPadding Or TextFormatFlags.Left Or TextFormatFlags.VerticalCenter)
-                                            e.Graphics.DrawRectangle(dottedPen, nodeColumnBounds)
+                                            With fieldNode
+                                                leftWidth = Node_LeftWidth(.HeaderLevel, .ColumnIndex)
+                                                nodeColumnBounds = New Rectangle(leftWidth.First - HScroll.Value, Node.Bounds.Top, leftWidth.Last, Node.Bounds.Height)
+                                                ._Bounds = nodeColumnBounds
+                                                If nodeColumnBounds.Left >= Width Then Exit For
+                                                TextRenderer.DrawText(e.Graphics,
+                                                            .Text,
+                                                            .Font,
+                                                            nodeColumnBounds,
+                                                            .ForeColor,
+                                                            .TextBackColor,
+                                                            TextFormatFlags.LeftAndRightPadding Or TextFormatFlags.NoPadding Or TextFormatFlags.Left Or TextFormatFlags.VerticalCenter)
+                                                e.Graphics.DrawRectangle(dottedPen, nodeColumnBounds)
+                                                If CurrentMouseNode Is fieldNode And .TipText Is Nothing Then
+                                                    Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, MouseOverColor))
+                                                        e.Graphics.FillRectangle(SemiTransparentBrush, nodeColumnBounds)
+                                                    End Using
+                                                End If
+                                                If .Selected Then
+                                                    Dim selectionBounds As Rectangle = .Bounds
+                                                    Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, SelectionColor))
+                                                        e.Graphics.FillRectangle(SemiTransparentBrush, nodeColumnBounds)
+                                                        SelectionBounds.Inflate(1, 1)
+                                                    End Using
+                                                    e.Graphics.DrawRectangle(Pens.Black, SelectionBounds)
+                                                End If
+                                            End With
                                         Next
                                     End Using
                                 End If
@@ -933,9 +950,12 @@ Public Class TreeViewer
         Set(value As Boolean)
             If _MultiSelect <> value Then
                 If Not value Then
-                    For Each Node In Ancestors.All
-                        Node._Selected = False
-                    Next
+                    Ancestors.All.ForEach(Sub(node)
+                                              node._Selected = False
+                                              node.Fields.ForEach(Sub(field)
+                                                                      field._Selected = False
+                                                                  End Sub)
+                                          End Sub)
                 End If
                 _MultiSelect = value
                 Invalidate()
@@ -954,7 +974,14 @@ Public Class TreeViewer
     End Property
     Public ReadOnly Property SelectedNodes As List(Of Node)
         Get
-            Return Ancestors.All.Where(Function(n) n.Selected).ToList
+            Dim nodesSelected As New List(Of Node)
+            Ancestors.All.ForEach(Sub(node)
+                                      If node.Selected Then nodesSelected.Add(node)
+                                      node.Fields.ForEach(Sub(field)
+                                                              If field.Selected Then nodesSelected.Add(field)
+                                                          End Sub)
+                                  End Sub)
+            Return nodesSelected
         End Get
     End Property
     Public ReadOnly Property Ancestors As New NodeCollection(Me)
@@ -1070,7 +1097,7 @@ Public Class TreeViewer
                                 .Checked = Not .Checked
                                 RaiseEvent NodeChecked(Me, New NodeEventArgs(HitNode))
 
-                            Case NodeRegion.Image, NodeRegion.Node
+                            Case NodeRegion.Image, NodeRegion.Node, NodeRegion.Field
                                 ._Clicked = True
                                 If Not MultiSelect Then
                                     For Each Node In SelectedNodes.Except({HitNode})
@@ -1179,6 +1206,7 @@ Public Class TreeViewer
 
     End Sub
 #End Region
+
 #Region " DRAG & DROP "
     Private Sub OnDragStart()
 
@@ -1659,25 +1687,44 @@ Public Class TreeViewer
 #Region " METHODS / FUNCTIONS "
     Public Function HitTest(Location As Point) As HitRegion
 
-        Dim Region As New HitRegion
-        Dim expandBounds As New List(Of Node)(From N In Ancestors.Draw Where N.ExpandCollapseBounds.Contains(Location))
-        Dim favoriteBounds As New List(Of Node)(From N In Ancestors.Draw Where N.FavoriteBounds.Contains(Location))
-        Dim checkBounds As New List(Of Node)(From N In Ancestors.Draw Where N.CheckBounds.Contains(Location))
-        Dim imageBounds As New List(Of Node)(From N In Ancestors.Draw Where N.ImageBounds.Contains(Location))
-        Dim nodeBounds As New List(Of Node)(From N In Ancestors.Draw Where N.Bounds.Contains(Location))
+        Dim hotSpot As New HitRegion
+        Dim AncestorsDraw As New List(Of Node)(Ancestors.Draw)
+        With hotSpot
+            .Region = NodeRegion.None
+            AncestorsDraw.ForEach(Sub(node)
+                                      If node.Bounds.Contains(Location) Then
+                                          .Region = NodeRegion.Node
+                                          .Node = node
 
-        Dim HitBounds As New List(Of Node)(expandBounds.Union(favoriteBounds).Union(checkBounds).Union(nodeBounds))
-        If HitBounds.Any Then
-            With Region
-                .Node = HitBounds.First
-                If expandBounds.Any Then .Region = NodeRegion.Expander
-                If favoriteBounds.Any Then .Region = NodeRegion.Favorite
-                If checkBounds.Any Then .Region = NodeRegion.CheckBox
-                If imageBounds.Any Then .Region = NodeRegion.Image
-                If nodeBounds.Any Then .Region = NodeRegion.Node
-            End With
-        End If
-        Return Region
+                                      ElseIf node.CheckBounds.Contains(Location) Then
+                                          .Region = NodeRegion.CheckBox
+                                          .Node = node
+
+                                      ElseIf node.ExpandCollapseBounds.Contains(Location) Then
+                                          .Region = NodeRegion.Expander
+                                          .Node = node
+
+                                      ElseIf node.FavoriteBounds.Contains(Location) Then
+                                          .Region = NodeRegion.Favorite
+                                          .Node = node
+
+                                      ElseIf node.ImageBounds.Contains(Location) Then
+                                          .Region = NodeRegion.Image
+                                          .Node = node
+
+                                      Else
+                                          node.Fields.ForEach(Sub(field)
+                                                                  If field.Bounds.Contains(Location) Then
+                                                                      .Region = NodeRegion.Field
+                                                                      .Node = field
+                                                                  End If
+                                                              End Sub)
+
+                                      End If
+                                      If Not .Region = NodeRegion.None Then Exit Sub
+                                  End Sub)
+        End With
+        Return hotSpot
 
     End Function
     Public Sub ExpandNodes()

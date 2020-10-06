@@ -1127,6 +1127,11 @@ Public Class TreeViewer
     Private Sub ColumnHeaders_Changed() Handles ColumnHeaders_.Changed
         If ColumnHeaders.Any Then RecursiveBuild(Ancestors, 0, Table)
     End Sub
+    Private Sub ColumnHeader_Clicked(sender As Object, e As ColumnEventArgs) Handles Me.ColumnClicked
+
+        Ancestors.Sort(Function(x, y) String.Compare(Convert.ToString(x.SortValue, InvariantCulture), Convert.ToString(y.SortValue, InvariantCulture), StringComparison.Ordinal))
+
+    End Sub
     Friend ReadOnly Property Hit As HitRegion
 
     Protected Overrides Sub OnMouseDown(e As MouseEventArgs)

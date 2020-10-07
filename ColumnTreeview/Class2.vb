@@ -56,6 +56,129 @@ Public Class ColumnEventArgs
         Column = Value
     End Sub
 End Class
+Public Class AlignFormat
+    Implements IEquatable(Of AlignFormat)
+    Implements IDisposable
+    Public Enum TypeGroup
+        None
+        Booleans
+        Decimals
+        Integers
+        Dates
+        Times
+        Images
+        Strings
+    End Enum
+    Public ReadOnly Property Alignment As StringFormat
+    Public ReadOnly Property DataType As Type
+    Public ReadOnly Property FormatString As String
+    Public ReadOnly Property Group As TypeGroup
+
+    Public Sub New(DataType As Type)
+
+        _DataType = DataType
+
+        Select Case DataType
+            Case GetType(Boolean), GetType(Byte), GetType(Short), GetType(Integer), GetType(Long), GetType(Date), GetType(DateAndTime), GetType(Image), GetType(Bitmap), GetType(Icon)
+                Alignment = New StringFormat With {
+    .Alignment = StringAlignment.Center,
+    .LineAlignment = StringAlignment.Center}
+
+            Case GetType(Decimal), GetType(Double)
+                Alignment = New StringFormat With {
+    .Alignment = StringAlignment.Far,
+    .LineAlignment = StringAlignment.Center}
+
+            Case Else
+                Alignment = New StringFormat With {
+    .Alignment = StringAlignment.Near,
+    .LineAlignment = StringAlignment.Center}
+
+        End Select
+
+        Select Case DataType
+            Case GetType(Boolean)
+                _Group = TypeGroup.Booleans
+                _FormatString = String.Empty
+
+            Case GetType(Byte), GetType(Short), GetType(Integer), GetType(Long)
+                _Group = TypeGroup.Integers
+                _FormatString = String.Empty
+
+            Case GetType(Date)
+                _Group = TypeGroup.Dates
+                _FormatString = Threading.Thread.CurrentThread.CurrentCulture.DateTimeFormat.ShortDatePattern
+
+            Case GetType(DateAndTime)
+                _Group = TypeGroup.Times
+                _FormatString = Threading.Thread.CurrentThread.CurrentCulture.DateTimeFormat.FullDateTimePattern
+
+            Case GetType(Decimal), GetType(Double)
+                _Group = TypeGroup.Decimals
+                _FormatString = "C2"
+
+            Case GetType(Image), GetType(Bitmap), GetType(Icon)
+                _Group = TypeGroup.Images
+                _FormatString = String.Empty
+
+            Case GetType(String)
+                _Group = TypeGroup.Strings
+                _FormatString = String.Empty
+
+            Case Else
+                _Group = TypeGroup.None
+                _FormatString = String.Empty
+
+        End Select
+
+    End Sub
+    Public Overrides Function GetHashCode() As Integer
+        Return Alignment.GetHashCode Xor DataType.GetHashCode Xor FormatString.GetHashCode Xor Group.GetHashCode
+    End Function
+    Public Overloads Function Equals(ByVal other As AlignFormat) As Boolean Implements IEquatable(Of AlignFormat).Equals
+        Return DataType Is other?.DataType
+    End Function
+    Public Shared Operator =(ByVal Object1 As AlignFormat, ByVal Object2 As AlignFormat) As Boolean
+        Return Object1.Equals(Object2)
+    End Operator
+    Public Shared Operator <>(ByVal Object1 As AlignFormat, ByVal Object2 As AlignFormat) As Boolean
+        Return Not Object1 = Object2
+    End Operator
+    Public Overrides Function Equals(ByVal obj As Object) As Boolean
+        If TypeOf obj Is AlignFormat Then
+            Return CType(obj, AlignFormat) = Me
+        Else
+            Return False
+        End If
+    End Function
+
+#Region "IDisposable Support"
+    Private DisposedValue As Boolean ' To detect redundant calls IDisposable
+    Protected Overridable Sub Dispose(disposing As Boolean)
+        If Not DisposedValue Then
+            If disposing Then
+                ' TODO: dispose managed state (managed objects).
+                Alignment.Dispose()
+            End If
+            ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
+            ' TODO: set large fields to null.
+        End If
+        DisposedValue = True
+    End Sub
+    ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
+    Protected Overrides Sub Finalize()
+        ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+        Dispose(False)
+        MyBase.Finalize()
+    End Sub
+    ' This code added by Visual Basic to correctly implement the disposable pattern.
+    Public Sub Dispose() Implements IDisposable.Dispose
+        ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
+        Dispose(True)
+        GC.SuppressFinalize(Me)
+    End Sub
+#End Region
+End Class
 Public Class NodeEventArgs
     Inherits EventArgs
     Public ReadOnly Property Node As Node
@@ -320,13 +443,19 @@ Public Class TreeViewer
                                         End Using
                                     End If
                                 End If
-                                TextRenderer.DrawText(e.Graphics,
-                                                      If(mouseInTip, .TipText, .Text),
-                                                      .Font,
-                                                      .Bounds,
-                                                      .ForeColor,
-                                                      .TextBackColor,
-                                                      TextFormatFlags.LeftAndRightPadding Or TextFormatFlags.NoPadding Or TextFormatFlags.Left Or TextFormatFlags.VerticalCenter)
+                                Using textBrush As New SolidBrush(.ForeColor)
+                                    Using sf As StringFormat = If(.Header Is Nothing, New StringFormat With {
+                                        .Alignment = StringAlignment.Center,
+                                        .LineAlignment = StringAlignment.Center
+                                    },
+                                    .Header.GridFormat.Alignment)
+                                        e.Graphics.DrawString(If(mouseInTip, .TipText, .Text),
+                                                                  .Font,
+                                                                  textBrush,
+                                                                  .Bounds,
+                                                                  sf)
+                                    End Using
+                                End Using
                                 If Hit?.Node Is Node And .TipText Is Nothing Then
                                     Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, MouseOverColor))
                                         e.Graphics.FillRectangle(SemiTransparentBrush, .Bounds)
@@ -385,13 +514,17 @@ Public Class TreeViewer
                                                 nodeColumnBounds = New Rectangle(leftWidth.First - HScroll.Value, Node.Bounds.Top, leftWidth.Last, Node.Bounds.Height)
                                                 ._Bounds = nodeColumnBounds
                                                 If nodeColumnBounds.Right > 0 And nodeColumnBounds.Left < Width Then
-                                                    TextRenderer.DrawText(e.Graphics,
-                                                            .Text,
-                                                            .Font,
-                                                            nodeColumnBounds,
-                                                            .ForeColor,
-                                                            .TextBackColor,
-                                                            TextFormatFlags.LeftAndRightPadding Or TextFormatFlags.NoPadding Or TextFormatFlags.Left Or TextFormatFlags.VerticalCenter)
+                                                    Using textBrush As New SolidBrush(.ForeColor)
+                                                        Using sf As New StringFormat
+                                                            sf.LineAlignment = StringAlignment.Center
+                                                            sf.Alignment = If(.Header Is Nothing, StringAlignment.Center, .Header.GridFormat.Alignment.Alignment)
+                                                            e.Graphics.DrawString(If(mouseInTip, .TipText, .Text),
+                                                                                      .Font,
+                                                                                      textBrush,
+                                                                                      nodeColumnBounds,
+                                                                                      sf)
+                                                        End Using
+                                                    End Using
                                                     e.Graphics.DrawRectangle(dottedPen, nodeColumnBounds)
                                                     If Hit?.Node Is fieldNode And .TipText Is Nothing Then
                                                         Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, MouseOverColor))
@@ -917,6 +1050,11 @@ Public Class TreeViewer
         Dim headers As ColumnHeadCollection = ColumnHeaders(lvl)
         Dim headName As String = headers(0).Text 'Must be the first
         If tbl?.Columns.Contains(headName) Then
+            Dim columnTypes As New Dictionary(Of String, Type)
+            For Each column As DataColumn In tbl.Columns
+                columnTypes.Add(column.ColumnName, column.DataType)
+                headers.DataTypes(column.ColumnName) = column.DataType
+            Next
             Dim tables = (From r In tbl.AsEnumerable Group r By groupX = r(headName).ToString Into headGroup = Group
                           Select New With {
                                                      .groupBy = groupX,
@@ -924,12 +1062,15 @@ Public Class TreeViewer
                                                      }).ToDictionary(Function(k) k.groupBy, Function(v) v.table)
             '/// Each table will be a subset of Rows
             For Each tableGroup In tables
+                Dim firstRow As DataRow = tableGroup.Value.First
                 Dim headNode As Node = nc.Add(New Node(tableGroup.Key))
                 With headNode
                     .HeaderLevel_ = lvl
                     .ColumnIndex_ = 0
                     .IsField_ = False
                     .Font = Font
+                    .Row_ = firstRow
+                    .Value = firstRow(headName)
                 End With
                 Dim xx As Integer = 0
                 tableGroup.Value.ForEach(Sub(row)
@@ -941,9 +1082,11 @@ Public Class TreeViewer
                                                  With childNode
                                                      .HeaderLevel_ = lvl
                                                      .ColumnIndex_ = 1
+                                                     .DataType_ = GetType(String)
                                                      .IsField_ = False
                                                      .Font = Font
                                                      .Row_ = row
+                                                     .Value = row(groupBy)
                                                  End With
                                                  subHeaders.RemoveAt(0)
                                                  Dim columnIndex As Byte = 2
@@ -954,6 +1097,7 @@ Public Class TreeViewer
                                                                             .ColumnIndex_ = columnIndex
                                                                             .IsField_ = True
                                                                             .Font = Font
+                                                                            .Value = row(column.Text)
                                                                         End With
                                                                         columnIndex += CByte(1)
                                                                     End Sub)
@@ -1197,6 +1341,11 @@ Public Class TreeViewer
                     End If
                 End If
             Else
+                Ancestors.ForEach(Sub(root)
+                                      root.Children.Sort(Function(x, y)
+                                                             Return x.Text.CompareTo(y.Text)
+                                                         End Function)
+                                  End Sub)
                 RaiseEvent ColumnClicked(Me, New ColumnEventArgs(HitRegion.Column))
             End If
         End If
@@ -1462,9 +1611,16 @@ Public Class TreeViewer
             Return ColumnHeaders.Sum(Function(h) h.Height)
         End Get
     End Property
+    Private ReadOnly Property HeadersWidth As Integer
+        Get
+            Return ColumnHeaders.Sum(Function(h) h.Sum(Function(header)
+                                                           Return header.Width
+                                                       End Function))
+        End Get
+    End Property
     Public ReadOnly Property UnRestrictedSize As Size
         Get
-            Return New Size(VScrollWidth + RollingWidth + Offset.X, RollingHeight + Offset.Y + 3)
+            Return New Size({RollingWidth + Offset.X, HeadersWidth}.Max, RollingHeight + Offset.Y) 'VScrollWidth + 
         End Get
     End Property
     Friend Sub RequiresRepaint()
@@ -1587,8 +1743,7 @@ Public Class TreeViewer
                     Dim headWidths As Integer = .Bounds.Right
                     For Each fieldNode In .Fields
                         columnHead = ColumnHeaders(.HeaderLevel)(fieldNode.ColumnIndex)
-                        Dim textWidth As Integer = TextRenderer.MeasureText(fieldNode.Text, fieldNode.Font).Width
-                        If textWidth > columnHead.Width Then columnHead.Width = textWidth
+                        If fieldNode.Bounds.Width > columnHead.Width Then columnHead.Width = fieldNode.Bounds.Width
                         headWidths += columnHead.Width
                     Next
                     If headWidths > RollingWidth Then RollingWidth = headWidths
@@ -1604,6 +1759,7 @@ Public Class TreeViewer
 
         Dim Y As Integer = RollingHeight - VScroll.Value
         Dim HorizontalSpacing As Integer = 3
+
         With Node
             If ExpandBeforeText Then
 #Region " +- Icon precedes Text "
@@ -1635,7 +1791,7 @@ Public Class TreeViewer
                 REM TEXT
                 ._Bounds.X = ._Bounds_ShowHide.Right + If(._Bounds_ShowHide.Width = 0, 0, HorizontalSpacing)
                 ._Bounds.Y = Y
-                ._Bounds.Width = TextRenderer.MeasureText(.Text, .Font).Width
+                '._Bounds.Width = TextRenderer.MeasureText(.Text, .Font).Width .... This is already done at the Node level ==> Public Property Text As String ( Set )
                 ._Bounds.Height = .Height
 #End Region
             Else
@@ -1668,7 +1824,7 @@ Public Class TreeViewer
                 REM TEXT
                 ._Bounds.X = ._Bounds_Image.Right + If(._Bounds_Image.Width = 0, 0, HorizontalSpacing)
                 ._Bounds.Y = Y
-                ._Bounds.Width = TextRenderer.MeasureText(.Text, .Font).Width
+                '._Bounds.Width = TextRenderer.MeasureText(.Text, .Font).Width .... This is already done at the Node level ==> Public Property Text As String ( Set )
                 ._Bounds.Height = .Height
 #End Region
             End If
@@ -1941,9 +2097,9 @@ Public NotInheritable Class NodeCollection
     End Property
     Public ReadOnly Property Client As New List(Of Node)
     Public ReadOnly Property Draw As New List(Of Node)
-    Public ReadOnly Property CollectionDataType As Type
+    Public ReadOnly Property DataType As Type
         Get
-            Dim Types = From n In Me Select n.DataType
+            Dim Types As New List(Of Type)([Select](Function(n) n.DataType))
             Return GetDataType(Types)
         End Get
     End Property
@@ -2110,7 +2266,7 @@ Public NotInheritable Class NodeCollection
     Friend Sub SortAscending(Optional repaint As Boolean = True)
 
         If TreeViewer?.FavoritesFirst Then
-            Select Case CollectionDataType
+            Select Case DataType
                 Case GetType(String)
                     Sort(Function(x, y)
                              Dim Level1 = y.Favorite.CompareTo(x.Favorite) 'False=0, True=1 
@@ -2167,7 +2323,7 @@ Public NotInheritable Class NodeCollection
                          End Function)
             End Select
         Else
-            Select Case CollectionDataType
+            Select Case DataType
                 Case GetType(String)
                     Sort(Function(x, y) String.Compare(x.Text, y.Text, StringComparison.Ordinal))
 
@@ -2195,7 +2351,7 @@ Public NotInheritable Class NodeCollection
     Friend Sub SortDescending(Optional repaint As Boolean = True)
 
         If TreeViewer?.FavoritesFirst Then
-            Select Case CollectionDataType
+            Select Case DataType
                 Case GetType(String)
                     Sort(Function(y, x)
                              Dim Level1 = x.Favorite.CompareTo(y.Favorite)
@@ -2252,7 +2408,7 @@ Public NotInheritable Class NodeCollection
                          End Function)
             End Select
         Else
-            Select Case CollectionDataType
+            Select Case DataType
                 Case GetType(String)
                     Sort(Function(y, x) String.Compare(x.Text, y.Text, StringComparison.Ordinal))
 
@@ -2445,14 +2601,20 @@ Public Class Node
     End Property
     Public Property Name As String
     Public Property Tag As Object
+    Friend Value_ As Object
+    Friend Property Value As Object
+        Get
+            Return Value_
+        End Get
+        Set(value As Object)
+            Value_ = If(IsDBNull(value), Nothing, value)
+            Text = Format(Value_, Header.GridFormat.FormatString)
+        End Set
+    End Property
     Private _Text As String
     Public Property Text As String
         Get
-            If ShowNodeIndex Then
-                Return _Text & " [" & Index.ToString(InvariantCulture) & "]"
-            Else
-                Return _Text
-            End If
+            Return _Text & If(ShowNodeIndex, " [" & Index.ToString(InvariantCulture) & "]", String.Empty)
         End Get
         Set(value As String)
             If Not _Text = value Then
@@ -2472,6 +2634,7 @@ Public Class Node
         End Get
         Set(value As Font)
             _Font = value
+            _Bounds.Width = TextRenderer.MeasureText(Text, Font).Width
             RequiresRepaint()
         End Set
     End Property
@@ -2574,7 +2737,7 @@ Public Class Node
         _Path.Add(New KeyValuePair(Of Integer, String)(_Node.Level, _Node.Name))
         If Not IsNothing(_Node.Parent) Then GetNamePath(_Node.Parent)
     End Sub
-    Public ReadOnly Property TextPath() As String
+    Public ReadOnly Property TextPath As String
         Get
             _Path.Clear()
             GetTextPath(Me)
@@ -2702,9 +2865,24 @@ Public Class Node
             Return LastSibling Is Me
         End Get
     End Property
+    Public ReadOnly Property Header As ColumnHead
+        Get
+            Return TreeViewer?.ColumnHeaders(HeaderLevel)(ColumnIndex)
+        End Get
+    End Property
+    Friend DataType_ As Type = Nothing
     Public ReadOnly Property DataType As Type
         Get
-            Return GetDataType(SortValue)
+            If HeaderLevel = 255 Or ColumnIndex = 255 Then
+                'Not created using DataTable
+                DataType_ = If(DataType_, GetDataType(SortValue))
+
+            Else
+                'Created using DataTable - HeaderLevel and ColumnIndex both set to a value
+                DataType_ = Header.DataType
+
+            End If
+            Return DataType_
         End Get
     End Property
     Public Property CanDragDrop As Boolean = True
@@ -2830,10 +3008,14 @@ Public Class Node
     End Sub
     Public Overrides Function ToString() As String
 
+        Dim typeString As String = If(DataType Is Nothing, String.Empty, ", Type=" & Replace(DataType.ToString, "System.", String.Empty))
+        Dim textString As String = If(Text, "( empty )")
+        Dim childCount As String = If(Children.Any, ", Children ( " & Children.Count & " )", String.Empty)
+
         If Name Is Nothing Then
-            Return Join({If(Text, "( empty )"), If(Children.Any, "( " & Children.Count & " )", String.Empty)})
+            Return Join({textString, typeString, childCount}, String.Empty)
         Else
-            Return Join({"Key=", Name, ", Text=", If(Text, "( empty )"), If(Children.Any, "( " & Children.Count & " )", String.Empty)})
+            Return Join({"Key=", Name, ", Text=", textString, typeString, childCount}, String.Empty)
         End If
 
     End Function
@@ -2841,16 +3023,16 @@ Public Class Node
 #Region "IDisposable Support"
     Private DisposedValue As Boolean ' To detect redundant calls IDisposable
     Protected Overridable Sub Dispose(disposing As Boolean)
-        If Not Me.DisposedValue Then
+        If Not DisposedValue Then
             If disposing Then
                 ' TODO: dispose managed state (managed objects).
-                Me._Font.Dispose()
-                Me.Font.Dispose()
+                _Font.Dispose()
+                Font.Dispose()
             End If
             ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
             ' TODO: set large fields to null.
         End If
-        Me.DisposedValue = True
+        DisposedValue = True
     End Sub
     ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
     Protected Overrides Sub Finalize()
@@ -3001,6 +3183,8 @@ End Class
 REM //////////////// HEADER COLLECTION \\\\\\\\\\\\\\\\
 Public Class ColumnHeadCollection
     Inherits List(Of ColumnHead)
+    Implements IDisposable
+
     Friend Event Changed()
     Friend Parent_ As TreeViewer
     Public ReadOnly Property Parent As TreeViewer
@@ -3008,6 +3192,8 @@ Public Class ColumnHeadCollection
             Return Parent_
         End Get
     End Property
+
+    Public WithEvents DataTypes As New SpecialDictionary(Of String, Type)
     Public Sub New()
     End Sub
     Public Sub New(columns As String())
@@ -3015,8 +3201,19 @@ Public Class ColumnHeadCollection
         If columns IsNot Nothing Then
             For Each column As String In columns
                 Add(column)
+                DataTypes.Add(column, GetType(String)) 'Default
             Next
+            AddHandler DataTypes.PropertyChanged, AddressOf DataType_Set
         End If
+
+    End Sub
+    Private Sub DataType_Set(sender As Object, e As DictionaryEventArgs)
+
+        Dim columnName As String = e.Key.ToString
+        Dim lastType As Type = CType(e.LastValue, Type)
+        Dim newType As Type = CType(e.Value, Type)
+        Dim header As ColumnHead = Item(columnName)
+        header.GridFormat = New AlignFormat(newType)
 
     End Sub
 
@@ -3123,7 +3320,7 @@ Public Class ColumnHeadCollection
     Public Shadows Function Add(ByVal Text As String) As ColumnHead
 
         Dim addHeader As New ColumnHead(Text) With {
-            .Width = 100
+            .Width = 3 + TextRenderer.MeasureText(.Text, Styles.Font).Width + 3
         }
         Return Add(addHeader)
 
@@ -3153,6 +3350,13 @@ Public Class ColumnHeadCollection
         Return addHeader
 
     End Function
+    Public Shadows Function Item(headerName As String) As ColumnHead
+
+        Dim names As New List(Of ColumnHead)
+        names.AddRange(Where(Function(h) h.Name = headerName))
+        Return If(names.Any, names.First, Nothing)
+
+    End Function
     Public Shadows Sub Insert(ByVal index As Integer, ByVal insertHeader As ColumnHead)
 
         MyBase.Insert(index, insertHeader)
@@ -3165,17 +3369,49 @@ Public Class ColumnHeadCollection
         RaiseEvent Changed()
 
     End Sub
+
+#Region "IDisposable Support"
+    Private DisposedValue As Boolean ' To detect redundant calls IDisposable
+    Protected Overridable Sub Dispose(disposing As Boolean)
+        If Not DisposedValue Then
+            If disposing Then
+                ' TODO: dispose managed state (managed objects).
+                Styles_.Dispose()
+                MouseStyles_.Dispose()
+            End If
+            ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
+            ' TODO: set large fields to null.
+        End If
+        DisposedValue = True
+    End Sub
+    ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
+    Protected Overrides Sub Finalize()
+        ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+        Dispose(False)
+        MyBase.Finalize()
+    End Sub
+    ' This code added by Visual Basic to correctly implement the disposable pattern.
+    Public Sub Dispose() Implements IDisposable.Dispose
+        ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
+        Dispose(True)
+        GC.SuppressFinalize(Me)
+    End Sub
+#End Region
 End Class
 REM //////////////// HEADER \\\\\\\\\\\\\\\\
 <Serializable> Public Class ColumnHead
+    Implements IDisposable
+
+    Friend Event Changed(sender As Object, e As EventArgs)
     Friend Parent_ As ColumnHeadCollection
     Public ReadOnly Property Parent As ColumnHeadCollection
         Get
             Return Parent_
         End Get
     End Property
-    Public Sub New(headerText As String)
-        Text = headerText
+    Public Sub New(headerName As String)
+        Name_ = headerName 'Can NOT be changed
+        Text_ = headerName 'Can be changed
     End Sub
     Property Resizeable As Boolean
     Friend WithEvents Style_ As New CellStyle With {
@@ -3209,6 +3445,12 @@ REM //////////////// HEADER \\\\\\\\\\\\\\\\
         End Using
         Parent?.Parent?.Invalidate()
     End Sub
+    Friend Name_ As String = "Header"
+    Public ReadOnly Property Name As String
+        Get
+            Return Name_
+        End Get
+    End Property
     Private Text_ As String = "Header"
     Property Text As String
         Get
@@ -3217,11 +3459,11 @@ REM //////////////// HEADER \\\\\\\\\\\\\\\\
         Set(ByVal Value As String)
             If Text_ <> Value Then
                 Text_ = Value
-                OnChanged(Me, New EventArgs)
+                RaiseEvent Changed(Me, Nothing)
             End If
         End Set
     End Property
-    Private Width_ As Integer = 100
+    Private Width_ As Integer
     Property Width As Integer
         Get
             Return Width_
@@ -3229,7 +3471,7 @@ REM //////////////// HEADER \\\\\\\\\\\\\\\\
         Set(ByVal Value As Integer)
             If Width_ <> Value Then
                 Width_ = Value
-                OnChanged(Me, New EventArgs)
+                RaiseEvent Changed(Me, Nothing)
             End If
         End Set
     End Property
@@ -3241,7 +3483,7 @@ REM //////////////// HEADER \\\\\\\\\\\\\\\\
         Set(ByVal Value As Image)
             If Not SameImage(Image_, Value) Then
                 Image_ = Value
-                OnChanged(Me, New EventArgs)
+                RaiseEvent Changed(Me, Nothing)
             End If
         End Set
     End Property
@@ -3251,15 +3493,48 @@ REM //////////////// HEADER \\\\\\\\\\\\\\\\
             Return Bounds_
         End Get
     End Property
-    Public Event Changed(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnChanged(ByVal sender As Object, ByVal e As EventArgs)
-        RaiseEvent Changed(sender, e)
-    End Sub
-    Public Event Clicked(ByVal sender As Header)
-    Protected Friend Sub OnClicked(ByVal sender As Header)
-        RaiseEvent Clicked(sender)
-    End Sub
+    ReadOnly Property DataType As Type
+        Get
+            If GridFormat Is Nothing Then
+                Return Parent?.DataTypes(Name)
+            Else
+                Return GridFormat.DataType
+            End If
+        End Get
+    End Property
+    Public Property GridFormat As AlignFormat
     Public Overrides Function ToString() As String
-        Return Join({Text, Width.ToString, Style.Alignment.ToString}, ".")
+
+        Dim typeString As String = If(DataType Is Nothing, String.Empty, ", Type=" & Replace(DataType.ToString, "System.", String.Empty))
+        Return Join({Text, "Width=" & Width, typeString}, ", ")
+
     End Function
+
+#Region "IDisposable Support"
+    Private DisposedValue As Boolean ' To detect redundant calls IDisposable
+    Protected Overridable Sub Dispose(disposing As Boolean)
+        If Not disposedValue Then
+            If disposing Then
+                ' TODO: dispose managed state (managed objects).
+                Style_.Dispose()
+                MouseStyle_.Dispose()
+            End If
+            ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
+            ' TODO: set large fields to null.
+        End If
+        disposedValue = True
+    End Sub
+    ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
+    Protected Overrides Sub Finalize()
+        ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+        Dispose(False)
+        MyBase.Finalize()
+    End Sub
+    ' This code added by Visual Basic to correctly implement the disposable pattern.
+    Public Sub Dispose() Implements IDisposable.Dispose
+        ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
+        Dispose(True)
+        GC.SuppressFinalize(Me)
+    End Sub
+#End Region
 End Class

@@ -291,7 +291,7 @@ Public Class TreeViewer
             With TSMI_NodeEditing
                 .DisplayStyle = ToolStripItemDisplayStyle.ImageAndText
                 .ImageScaling = ToolStripItemImageScaling.None
-                .Image = Base64ToImage(Edit_String)
+                .Image = Base64ToImage(EditString)
                 With TLP_NodePermissions
                     .ColumnStyles.Add(New ColumnStyle With {.SizeType = SizeType.Absolute, .Width = 200})
                     .RowStyles.Add(New RowStyle With {.SizeType = SizeType.Absolute, .Height = 28})
@@ -303,11 +303,11 @@ Public Class TreeViewer
                 End With
                 TLP.SetSize(TLP_NodePermissions)
                 .DropDownItems.Add(New ToolStripControlHost(TLP_NodePermissions))
-                IC_NodeEdit.Image = Base64ToImage(Edit_String)
+                IC_NodeEdit.Image = Base64ToImage(EditString)
                 IC_NodeEdit.DropDown.SelectionColor = Color.Transparent
-                IC_NodeAdd.Image = Base64ToImage(Add_String)
+                IC_NodeAdd.Image = Base64ToImage(AddString)
                 IC_NodeAdd.DropDown.SelectionColor = Color.Transparent
-                IC_NodeRemove.Image = Base64ToImage(Remove_String)
+                IC_NodeRemove.Image = Base64ToImage(RemoveString)
             End With
             .Items.Add(TSMI_NodeEditing)
 #End Region
@@ -581,12 +581,20 @@ Public Class TreeViewer
                                                                   Dim currentTheme = If(header Is Hit?.Column, .MouseStyle.Theme, drawStyle.Theme)
                                                                   e.Graphics.DrawImage(GlossyImages(currentTheme), headerBounds)
                                                               End If
+                                                              Dim textBounds As Rectangle = headerBounds
+                                                              If Not .SortOrder = SortOrder.None Then
+                                                                  textBounds = New Rectangle(headerBounds.X, headerBounds.Y, headerBounds.Width - .SortIcon.Width, headerBounds.Height)
+                                                                  Dim sortRectangle As New Rectangle(textBounds.Right, textBounds.Y, .SortIcon.Width, textBounds.Height)
+                                                                  sortRectangle.Inflate(.SortIcon.Width - sortRectangle.Width, CInt((.SortIcon.Height - sortRectangle.Height) / 2))
+                                                                  sortRectangle.Offset(-3, 0)
+                                                                  e.Graphics.DrawImage(.SortIcon, sortRectangle)
+                                                              End If
                                                               Using headerTextBrush As New SolidBrush(drawStyle.ForeColor)
                                                                   e.Graphics.DrawString(
                                                     .Text,
                                                     drawStyle.Font,
                                                     headerTextBrush,
-                                                    headerBounds,
+                                                    textBounds,
                                                     drawStyle.Alignment
                                                 )
                                                               End Using
@@ -1277,7 +1285,6 @@ Public Class TreeViewer
 
     End Sub
     Friend ReadOnly Property Hit As HitRegion
-
     Protected Overrides Sub OnMouseDown(e As MouseEventArgs)
 
         If e IsNot Nothing Then
@@ -1341,11 +1348,69 @@ Public Class TreeViewer
                     End If
                 End If
             Else
+                Dim hitColumn As ColumnHead = HitRegion.Column
+                Dim fieldName As String = hitColumn.Name
+                Dim hitGroup = hitColumn.GridFormat.Group
+                hitColumn.SortOrder = If(hitColumn.SortOrder = SortOrder.Ascending, SortOrder.Descending, SortOrder.Ascending)
+
+                Dim columnType As Type = HitRegion.Column.DataType
                 Ancestors.ForEach(Sub(root)
-                                      root.Children.Sort(Function(x, y)
-                                                             Return x.Text.CompareTo(y.Text)
-                                                         End Function)
+                                      If hitColumn.SortOrder = SortOrder.Ascending Then
+                                          root.Children.Sort(Function(x, y)
+                                                                 If x.Fields.Contains(fieldName) Then
+                                                                     Select Case hitGroup
+                                                                         Case AlignFormat.TypeGroup.Decimals, AlignFormat.TypeGroup.Integers
+                                                                             Return CDbl(x.Fields.Item(fieldName).Value).CompareTo(CDbl(y.Fields.Item(fieldName).Value))
+
+                                                                         Case AlignFormat.TypeGroup.Dates, AlignFormat.TypeGroup.Times
+                                                                             Return CDate(x.Fields.Item(fieldName).Value).CompareTo(CDate(y.Fields.Item(fieldName).Value))
+
+                                                                         Case AlignFormat.TypeGroup.Booleans
+                                                                             Return CBool(x.Fields.Item(fieldName).Value).CompareTo(CBool(y.Fields.Item(fieldName).Value))
+
+                                                                         Case AlignFormat.TypeGroup.Strings
+                                                                             Return x.Fields.Item(fieldName).Text.CompareTo(y.Fields.Item(fieldName).Text)
+
+                                                                         Case Else
+                                                                             'AlignFormat.TypeGroup.Images, AlignFormat.TypeGroup.None
+                                                                             Return 0
+
+                                                                     End Select
+
+                                                                 Else
+                                                                     Return 0
+                                                                 End If
+                                                             End Function)
+                                      Else
+                                          root.Children.Sort(Function(y, x)
+                                                                 If x.Fields.Contains(fieldName) Then
+                                                                     Select Case hitGroup
+                                                                         Case AlignFormat.TypeGroup.Decimals, AlignFormat.TypeGroup.Integers
+                                                                             Return CDbl(x.Fields.Item(fieldName).Value).CompareTo(CDbl(y.Fields.Item(fieldName).Value))
+
+                                                                         Case AlignFormat.TypeGroup.Dates, AlignFormat.TypeGroup.Times
+                                                                             Return CDate(x.Fields.Item(fieldName).Value).CompareTo(CDate(y.Fields.Item(fieldName).Value))
+
+                                                                         Case AlignFormat.TypeGroup.Booleans
+                                                                             Return CBool(x.Fields.Item(fieldName).Value).CompareTo(CBool(y.Fields.Item(fieldName).Value))
+
+                                                                         Case AlignFormat.TypeGroup.Strings
+                                                                             Return x.Fields.Item(fieldName).Text.CompareTo(y.Fields.Item(fieldName).Text)
+
+                                                                         Case Else
+                                                                             'AlignFormat.TypeGroup.Images, AlignFormat.TypeGroup.None
+                                                                             Return 0
+
+                                                                     End Select
+
+                                                                 Else
+                                                                     Return 0
+                                                                 End If
+                                                             End Function)
+                                      End If
                                   End Sub)
+                StopMe = True
+                RequiresRepaint()
                 RaiseEvent ColumnClicked(Me, New ColumnEventArgs(HitRegion.Column))
             End If
         End If
@@ -1397,7 +1462,7 @@ Public Class TreeViewer
 
         Cursor = Cursors.Default
         DragData.IsDragging = False
-        DragData.MousePoints.Clear()
+        DragData.MousePoints?.Clear()
         ScrollTimer.Stop()
         MyBase.OnMouseUp(e)
 
@@ -1577,7 +1642,7 @@ Public Class TreeViewer
     Private Sub DragScroll() Handles ScrollTimer.Tick
 
         If MouseButtons.HasFlag(MouseButtons.Left) And Not IsNothing(ScrollTimer.Tag) Then
-            UpdateDrawNodes()
+            DrawNodes_Set()
             Dim VScrollValue As Integer = VScroll.Value
             Dim Delta As Integer = 0
             If ScrollTimer.Tag.ToString = "Up" Then
@@ -1632,6 +1697,11 @@ Public Class TreeViewer
         RollingHeight = Offset.Y + HeadersHeight
 
         REM /// ITERATE ALL NODES CHANGING BOUNDS
+        ColumnHeaders.ForEach(Sub(ch)
+                                  ch.ForEach(Sub(h)
+                                                 h.Width = TextRenderer.MeasureText(h.Text, Font).Width
+                                             End Sub)
+                              End Sub)
         RefreshNodesBounds_Lines(Ancestors)
 
         REM /// TOTAL SIZE + RESIZE THE CONTROL IF AUTOSIZE
@@ -1676,7 +1746,6 @@ Public Class TreeViewer
             Height = proposedHeight
             maxWidth = Width
             maxHeight = Height
-            If Ancestors.Any And StopMe Then Stop
         Else
             maxWidth = {Width, maxWidth}.Min
             maxHeight = {Height, maxHeight}.Min
@@ -1690,7 +1759,7 @@ Public Class TreeViewer
             .Top = Height - .Height
             .LargeChange = maxWidth
             If .Visible Then
-                If .Value > maxWidth - Width Then .Value = {maxWidth - Width, .Minimum}.Max
+                'If .Value > maxWidth - Width Then .Value = {maxWidth - Width, .Minimum}.Max
                 .Show()
             Else
                 .Value = 0
@@ -1698,15 +1767,16 @@ Public Class TreeViewer
             End If
         End With
         With VScroll
+            Dim maxVscrollHeight As Integer = maxHeight - If(hScrollVisible, HScroll.Height, 0)
             .Minimum = 0
             .Maximum = {0, unboundedSize.Height - 1 + HScroll.Height}.Max
             .Visible = vscrollVisible
             .Left = maxWidth - VScrollWidth
-            .Height = maxHeight
+            .Height = maxVscrollHeight
             .Top = 0
-            .LargeChange = maxHeight
+            .LargeChange = maxVscrollHeight
             If .Visible Then
-                If .Value > maxHeight - Height Then .Value = {maxHeight - Height, .Minimum}.Max
+                'If .Value > maxHeight - Height Then .Value = {maxHeight - Height, .Minimum}.Max
                 .Show()
             Else
                 .Value = 0
@@ -1714,7 +1784,7 @@ Public Class TreeViewer
             End If
         End With
 #End Region
-        UpdateDrawNodes()
+        DrawNodes_Set()
 
         REM /// FINALLY- REPAINT
         Invalidate()
@@ -1757,54 +1827,57 @@ Public Class TreeViewer
     End Sub
     Private Sub RefreshNodeBounds_Lines(Node As Node)
 
-        Dim Y As Integer = RollingHeight - VScroll.Value
+        Dim y As Integer = RollingHeight - VScroll.Value
         Dim HorizontalSpacing As Integer = 3
 
         With Node
+            Dim x As Integer = 0 '- If(.IsRoot, HScroll.Value, 0)
             If ExpandBeforeText Then
+                '■■■■■■■■■■■■■ P r e f e r
 #Region " +- Icon precedes Text "
+                'Bounds.X cascades from [1] Favorite, [2] Checkbox, [3] Image, [4] ShowHide, [5] Text
                 REM FAVORITE
-                ._Bounds_Favorite.X = Offset.X + HorizontalSpacing + If(IsNothing(.Parent), If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right + HorizontalSpacing)
-                ._Bounds_Favorite.Y = Y + CInt((.Height - FavoriteImage.Height) / 2)
+                ._Bounds_Favorite.X = x + Offset.X + HorizontalSpacing + If(IsNothing(.Parent), If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right + HorizontalSpacing)
+                ._Bounds_Favorite.Y = y + CInt((.Height - FavoriteImage.Height) / 2)
                 ._Bounds_Favorite.Width = If(.CanFavorite, FavoriteImage.Width, 0)
                 ._Bounds_Favorite.Height = If(.CanFavorite, FavoriteImage.Height, .Height)
+                'If .Text = "402630" And StopMe Then Stop
 
                 REM CHECKBOX
                 ._Bounds_Check.X = ._Bounds_Favorite.Right + If(._Bounds_Favorite.Width = 0, 0, HorizontalSpacing)
                 ._Bounds_Check.Width = If(.CheckBox, CheckHeight, 0)
                 ._Bounds_Check.Height = CheckHeight
-                ._Bounds_Check.Y = Y + CInt((.Height - ._Bounds_Check.Height) / 2)
+                ._Bounds_Check.Y = y + CInt((.Height - ._Bounds_Check.Height) / 2)
 
                 REM IMAGE
                 ._Bounds_Image.X = ._Bounds_Check.Right + If(._Bounds_Check.Width = 0, 0, HorizontalSpacing)
                 ._Bounds_Image.Height = If(IsNothing(.Image), 0, If(.ImageScaling, .Height, .Image.Height))
                 'MAKE IMAGE SQUARE IF SCALING
                 ._Bounds_Image.Width = If(IsNothing(.Image), 0, If(.ImageScaling, ._Bounds_Image.Height, .Image.Width))
-                ._Bounds_Image.Y = Y + CInt((.Height - ._Bounds_Image.Height) / 2)
+                ._Bounds_Image.Y = y + CInt((.Height - ._Bounds_Image.Height) / 2)
 
                 REM EXPAND/COLLAPSE
                 ._Bounds_ShowHide.X = ._Bounds_Image.Right + HorizontalSpacing '+ If(IsNothing(.Parent), If(RootLines, 6, 0), .Parent._Bounds_Image.Right + HorizontalSpacing)
-                ._Bounds_ShowHide.Y = Y + CInt((.Height - ExpandHeight) / 2)
+                ._Bounds_ShowHide.Y = y + CInt((.Height - ExpandHeight) / 2)
                 ._Bounds_ShowHide.Width = If(.HasChildren, ExpandHeight, 0)
                 ._Bounds_ShowHide.Height = ExpandHeight
 
                 REM TEXT
                 ._Bounds.X = ._Bounds_ShowHide.Right + If(._Bounds_ShowHide.Width = 0, 0, HorizontalSpacing)
-                ._Bounds.Y = Y
-                '._Bounds.Width = TextRenderer.MeasureText(.Text, .Font).Width .... This is already done at the Node level ==> Public Property Text As String ( Set )
+                ._Bounds.Y = y
                 ._Bounds.Height = .Height
 #End Region
             Else
 #Region " +- Icon follows Text "
                 REM EXPAND/COLLAPSE
-                ._Bounds_ShowHide.X = Offset.X + HorizontalSpacing + If(IsNothing(.Parent), If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right + HorizontalSpacing)
-                ._Bounds_ShowHide.Y = Y + CInt((.Height - ExpandHeight) / 2)
+                ._Bounds_ShowHide.X = x + Offset.X + HorizontalSpacing + If(IsNothing(.Parent), If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right + HorizontalSpacing)
+                ._Bounds_ShowHide.Y = y + CInt((.Height - ExpandHeight) / 2)
                 ._Bounds_ShowHide.Width = If(.HasChildren, ExpandHeight, 0)
                 ._Bounds_ShowHide.Height = ExpandHeight
 
                 REM FAVORITE
                 ._Bounds_Favorite.X = ._Bounds_ShowHide.Right + If(._Bounds_ShowHide.Width = 0, 0, HorizontalSpacing)
-                ._Bounds_Favorite.Y = Y + CInt((.Height - FavoriteImage.Height) / 2)
+                ._Bounds_Favorite.Y = y + CInt((.Height - FavoriteImage.Height) / 2)
                 ._Bounds_Favorite.Width = If(.CanFavorite, FavoriteImage.Width, 0)
                 ._Bounds_Favorite.Height = If(.CanFavorite, FavoriteImage.Height, .Height)
 
@@ -1812,19 +1885,18 @@ Public Class TreeViewer
                 ._Bounds_Check.X = ._Bounds_Favorite.Right + If(._Bounds_Favorite.Width = 0, 0, HorizontalSpacing)
                 ._Bounds_Check.Width = If(.CheckBox, CheckHeight, 0)
                 ._Bounds_Check.Height = CheckHeight
-                ._Bounds_Check.Y = Y + CInt((.Height - ._Bounds_Check.Height) / 2)
+                ._Bounds_Check.Y = y + CInt((.Height - ._Bounds_Check.Height) / 2)
 
                 REM IMAGE
                 ._Bounds_Image.X = ._Bounds_Check.Right + If(._Bounds_Check.Width = 0, 0, HorizontalSpacing)
                 ._Bounds_Image.Height = If(IsNothing(.Image), 0, If(.ImageScaling, .Height, .Image.Height))
                 'MAKE IMAGE SQUARE IF SCALING
                 ._Bounds_Image.Width = If(IsNothing(.Image), 0, If(.ImageScaling, ._Bounds_Image.Height, .Image.Width))
-                ._Bounds_Image.Y = Y + CInt((.Height - ._Bounds_Image.Height) / 2)
+                ._Bounds_Image.Y = y + CInt((.Height - ._Bounds_Image.Height) / 2)
 
                 REM TEXT
                 ._Bounds.X = ._Bounds_Image.Right + If(._Bounds_Image.Width = 0, 0, HorizontalSpacing)
-                ._Bounds.Y = Y
-                '._Bounds.Width = TextRenderer.MeasureText(.Text, .Font).Width .... This is already done at the Node level ==> Public Property Text As String ( Set )
+                ._Bounds.Y = y
                 ._Bounds.Height = .Height
 #End Region
             End If
@@ -1846,7 +1918,7 @@ Public Class TreeViewer
             VScrollUpDown(e.OldValue - e.NewValue)
 
         End If
-        UpdateDrawNodes()
+        DrawNodes_Set()
 
     End Sub
     Private Sub HScrollLeftRight(X_Change As Integer)
@@ -1997,7 +2069,7 @@ Public Class TreeViewer
         Next
 
     End Sub
-    Private Sub UpdateDrawNodes()
+    Private Sub DrawNodes_Set()
 
         Ancestors.Client.Clear()
         For Each Node In Ancestors.Visible
@@ -3413,7 +3485,25 @@ REM //////////////// HEADER \\\\\\\\\\\\\\\\
         Name_ = headerName 'Can NOT be changed
         Text_ = headerName 'Can be changed
     End Sub
-    Property Resizeable As Boolean
+    Private SortOrder_ As New SortOrder
+    Public Property SortOrder As SortOrder
+        Get
+            Return SortOrder_
+        End Get
+        Set(value As SortOrder)
+            If value <> SortOrder_ Then
+                Dim chevronUp As String = "iVBORw0KGgoAAAANSUhEUgAAABEAAAALCAYAAACZIGYHAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABFSURBVChTY2SAgAYoTQ4A6z0PxP8pwPep4hLG//9BhlEGyHFJAzaLSQ2T+yBDkDFVXEL3MMEaFjBAbJhghAUMU8ElDAwAvNhdwMSXsO4AAAAASUVORK5CYII="
+                Dim chevronDown As String = "iVBORw0KGgoAAAANSUhEUgAAABEAAAALCAYAAACZIGYHAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABLSURBVChTY2SAgAYojQ80/P//H8rEBOeBGCRLCN8HGYINU8UljLgkSAGkuAQGsLqI2DCBYYywoYpLBixM0AFYL6lhgo7vU8ElDA0AaFFdwFj1ubQAAAAASUVORK5CYII="
+                _SortIcon = Base64ToImage(If(value = SortOrder.Ascending, chevronDown, chevronUp))
+                Parent?.ForEach(Sub(column)
+                                    If column IsNot Me Then column.SortOrder = SortOrder.None
+                                End Sub)
+                SortOrder_ = value
+                Parent?.Parent?.RequiresRepaint()
+            End If
+        End Set
+    End Property
+    Friend ReadOnly Property SortIcon As Image
     Friend WithEvents Style_ As New CellStyle With {
         .BackColor = Color.Transparent,
         .ShadeColor = Color.White,
@@ -3466,7 +3556,7 @@ REM //////////////// HEADER \\\\\\\\\\\\\\\\
     Private Width_ As Integer
     Property Width As Integer
         Get
-            Return Width_
+            Return Width_ + If(SortOrder = SortOrder.None, 0, 2 + SortIcon.Width + 2)
         End Get
         Set(ByVal Value As Integer)
             If Width_ <> Value Then

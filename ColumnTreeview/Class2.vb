@@ -49,13 +49,6 @@ Public Class HitRegion
         End If
     End Function
 End Class
-Public Class ColumnEventArgs
-    Inherits EventArgs
-    Public ReadOnly Property Column As ColumnHead
-    Public Sub New(ByVal Value As ColumnHead)
-        Column = Value
-    End Sub
-End Class
 Public Class AlignFormat
     Implements IEquatable(Of AlignFormat)
     Public Enum TypeGroup
@@ -145,6 +138,14 @@ Public Class AlignFormat
         End If
     End Function
 End Class
+Public Class ColumnEventArgs
+    Inherits EventArgs
+    Public ReadOnly Property Column As ColumnHead
+    Public Sub New(ByVal Value As ColumnHead)
+        Column = Value
+    End Sub
+End Class
+
 Public Class NodeEventArgs
     Inherits EventArgs
     Public ReadOnly Property Node As Node
@@ -173,6 +174,9 @@ Public Class TreeViewer
     Public WithEvents HScroll As New HScrollBar
     Private WithEvents NodeTimer As New Timer With {.Interval = 200}
     Private WithEvents ScrollTimer As New Timer With {.Interval = 50}
+    Private ReadOnly DragData As New DragInfo
+    Private _Cursor As Cursor
+
 #Region " TREEVIEW GLOBAL FUNCTIONS (CMS) "
     Private WithEvents TSDD_Options As New ToolStripDropDown With {.AutoClose = False, .Padding = New Padding(0), .DropShadowEnabled = True, .BackColor = Color.Transparent}
     Private WithEvents B_Arrow As New Button With {.Margin = New Padding(0), .FlatStyle = FlatStyle.Flat}
@@ -208,37 +212,93 @@ Public Class TreeViewer
     Private WithEvents IC_NodeEdit As New ImageCombo With {.Dock = DockStyle.Fill,
         .Margin = New Padding(0)}
 #End Region
+
+    '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ C O N S T A N T S
     Private Const CheckHeight As Integer = 14
     Private Const VScrollWidth As Integer = 14
     Private Const HScrollHeight As Integer = 12
     Private ExpandHeight As Integer = 10
-    Private DragData As New DragInfo
-    Private _Cursor As Cursor
-    Private ReadOnly FavoriteImage As Image = Base64ToImage(StarString)
-    Private VisibleIndex As Integer, RollingHeight As Integer, RollingWidth As Integer
-    Private ExpandImage As Image, CollapseImage As Image
-    Public Event Alert(sender As Object, e As AlertEventArgs)
 
-    '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ M O U S E   E V E N T S
+    '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ N O D E   I N D E X I N G
+    Private NodeIndex As Integer = 0
+    Private VisibleIndex As Integer
+    Private RollingHeight As Integer
+    Private RollingWidth As Integer
+
+    '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ I M A G E S
+    Private FavoriteImage As Image
+    Private ExpandImage As Image
+    Private CollapseImage As Image
+
+    '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ M O U S E O V E R
     Private LastMouseNode As Node = Nothing
     Private LastMouseColumn As ColumnHead = Nothing
     Private MousePoint As Point
 
+    '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ M I S C
+    Public Event Alert(sender As Object, e As AlertEventArgs)
     Private IgnoreSizeChanged As Boolean = False
 
-#Region " STRUCTURES / ENUMS "
+    Private Class DragInfo
+        Implements IEquatable(Of DragInfo)
+        Implements IDisposable
+        Friend MousePoints As New List(Of Point)
+        Friend IsDragging As Boolean
+        Friend DragNode As Node
+        Friend DropHighlightNode As Node
+
+        Public Overrides Function GetHashCode() As Integer
+            Return MousePoints.GetHashCode Xor IsDragging.GetHashCode Xor DragNode.GetHashCode Xor DropHighlightNode.GetHashCode
+        End Function
+        Public Overloads Function Equals(ByVal other As DragInfo) As Boolean Implements IEquatable(Of DragInfo).Equals
+            Return DragNode Is other?.DragNode
+        End Function
+        Public Shared Operator =(ByVal Object1 As DragInfo, ByVal Object2 As DragInfo) As Boolean
+            Return Object1.Equals(Object2)
+        End Operator
+        Public Shared Operator <>(ByVal Object1 As DragInfo, ByVal Object2 As DragInfo) As Boolean
+            Return Not Object1 = Object2
+        End Operator
+        Public Overrides Function Equals(ByVal obj As Object) As Boolean
+            If TypeOf obj Is DragInfo Then
+                Return CType(obj, DragInfo) = Me
+            Else
+                Return False
+            End If
+        End Function
+#Region "IDisposable Support"
+        Private DisposedValue As Boolean ' To detect redundant calls IDisposable
+        Protected Overridable Sub Dispose(disposing As Boolean)
+            If Not DisposedValue Then
+                If disposing Then
+                    ' TODO: dispose managed state (managed objects).
+                    DragNode.Dispose()
+                    DropHighlightNode.Dispose()
+                End If
+                ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
+                ' TODO: set large fields to null.
+            End If
+            DisposedValue = True
+        End Sub
+        ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
+        Protected Overrides Sub Finalize()
+            ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+            Dispose(False)
+            MyBase.Finalize()
+        End Sub
+        ' This code added by Visual Basic to correctly implement the disposable pattern.
+        Public Sub Dispose() Implements IDisposable.Dispose
+            ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
+            Dispose(True)
+            GC.SuppressFinalize(Me)
+        End Sub
+#End Region
+    End Class
     Public Enum CheckState
         None
         All
         Mixed
     End Enum
-    Private Structure DragInfo
-        Friend MousePoints As List(Of Point)
-        Friend IsDragging As Boolean
-        Friend DragNode As Node
-        Friend DropHighlightNode As Node
-    End Structure
-#End Region
     Public Sub New()
 
         SetStyle(ControlStyles.AllPaintingInWmPaint, True)
@@ -249,6 +309,8 @@ Public Class TreeViewer
         SetStyle(ControlStyles.Selectable, True)
         SetStyle(ControlStyles.Opaque, True)
         SetStyle(ControlStyles.UserMouse, True)
+
+        FavoriteImage = Base64ToImage(StarString)
 
         BackColor = Color.GhostWhite
 #Region " GLOBAL OPTIONS SET-UP "
@@ -1040,8 +1102,8 @@ Public Class TreeViewer
                 Dim headNode As Node = nc.Add(New Node(tableGroup.Key))
                 With headNode
                     .HeaderLevel_ = lvl
+                    .IsHeader_ = True
                     .ColumnIndex_ = 0
-                    .IsField_ = False
                     .Font = Font
                     .Row_ = firstRow
                     .Value = firstRow(headName)
@@ -1055,6 +1117,7 @@ Public Class TreeViewer
                                                  Dim childNode As Node = headNode.Children.Add(groupBy, nodeText)
                                                  With childNode
                                                      .HeaderLevel_ = lvl
+                                                     .IsFieldParent_ = True
                                                      .ColumnIndex_ = 1
                                                      .DataType_ = GetType(String)
                                                      .IsField_ = False
@@ -1257,9 +1320,11 @@ Public Class TreeViewer
             Dim HitRegion As HitRegion = HitTest(e.Location)
             If HitRegion.Column Is Nothing Then
                 Dim HitNode As Node = HitRegion.Node
-                DragData = New DragInfo With {.DragNode = HitNode,
-                    .IsDragging = False,
-                    .MousePoints = New List(Of Point)}
+                With DragData
+                    .DragNode = HitNode
+                    .IsDragging = False
+                    .MousePoints = New List(Of Point)
+                End With
                 If e.Button = MouseButtons.Right Then
                     Dim ShowLocation As Point = Cursor.Position
                     ShowLocation.Offset(10, 0)
@@ -1375,6 +1440,7 @@ Public Class TreeViewer
                                                              End Function)
                                       End If
                                   End Sub)
+                StopMe = True
                 RequiresRepaint()
                 RaiseEvent ColumnClicked(Me, New ColumnEventArgs(HitRegion.Column))
             End If
@@ -1401,7 +1467,6 @@ Public Class TreeViewer
                             hitInfo.Node.Expand()
                         End If
                     End If
-                    If hitInfo.Node IsNot Nothing AndAlso hitInfo.Node.Text = "DistributedSoftware" Then StopMe = True
                     LastMouseNode = hitInfo.Node
                     Invalidate()
                 End If
@@ -1427,8 +1492,10 @@ Public Class TreeViewer
     Protected Overrides Sub OnMouseUp(e As MouseEventArgs)
 
         Cursor = Cursors.Default
-        DragData.IsDragging = False
-        DragData.MousePoints?.Clear()
+        With DragData
+            .IsDragging = False
+            .MousePoints.Clear()
+        End With
         ScrollTimer.Stop()
         MyBase.OnMouseUp(e)
 
@@ -1651,13 +1718,14 @@ Public Class TreeViewer
     End Property
     Public ReadOnly Property UnRestrictedSize As Size
         Get
-            Return New Size({RollingWidth + Offset.X, HeadersWidth}.Max, RollingHeight + Offset.Y) 'VScrollWidth + 
+            Return New Size({RollingWidth + Offset.X, HeadersWidth}.Max, RollingHeight + Offset.Y)
         End Get
     End Property
     Friend Sub RequiresRepaint()
 
         IgnoreSizeChanged = True
         REM /// RESET INDEX / HEIGHT
+        NodeIndex = 0
         VisibleIndex = 0
         RollingWidth = Offset.X
         RollingHeight = Offset.Y + HeadersHeight
@@ -1665,7 +1733,8 @@ Public Class TreeViewer
         REM /// ITERATE ALL NODES CHANGING BOUNDS
         ColumnHeaders.ForEach(Sub(ch)
                                   ch.ForEach(Sub(h)
-                                                 h.Width = TextRenderer.MeasureText(h.Text, Font).Width
+                                                 h.ContentWidth_ = 0
+                                                 h.Width_ = 0
                                              End Sub)
                               End Sub)
         RefreshNodesBounds_Lines(Ancestors)
@@ -1759,51 +1828,51 @@ Public Class TreeViewer
     End Sub
     Private Sub RefreshNodesBounds_Lines(Nodes As NodeCollection)
 
-        Dim NodeIndex As Integer = 0
-        Dim maxWidths As New Dictionary(Of Integer, Integer)
-        For Each Node As Node In Nodes
-            With Node
-                ._Index = NodeIndex
-                ._Visible = .Parent Is Nothing OrElse .Parent.Expanded
-                If .Visible Then
-                    RefreshNodeBounds_Lines(Node)
-                    ._VisibleIndex = VisibleIndex
-                    VisibleIndex += 1
-                    If .Bounds.Right > RollingWidth Then RollingWidth = .Bounds.Right
-                    RollingHeight += .Height
-                    If .HasChildren Then RefreshNodesBounds_Lines(.Children)
-                End If
-                If Not .HeaderLevel = 255 Then
-                    Dim columnHead As ColumnHead = ColumnHeaders(.HeaderLevel)(.ColumnIndex)
-                    If .Bounds.Width > columnHead.Width Then columnHead.Width = .Bounds.Width
-                    Dim headWidths As Integer = .Bounds.Right
-                    For Each fieldNode In .Fields
-                        columnHead = ColumnHeaders(.HeaderLevel)(fieldNode.ColumnIndex)
-                        If fieldNode.Bounds.Width > columnHead.Width Then columnHead.Width = fieldNode.Bounds.Width
-                        headWidths += columnHead.Width
-                    Next
-                    If headWidths > RollingWidth Then RollingWidth = headWidths
-                End If
-                NodeIndex += 1
-            End With
-            '/// Test
-            If FavoritesFirst And Node.CanFavorite Then Node.Children.SortAscending(False) 'Do not let the Sort require repaint as it cycles back here to an infinate loop
-        Next
+        Nodes.ForEach(Sub(node)
+                          With node
+                              ._Index = NodeIndex
+                              ._Visible = .Parent Is Nothing OrElse .Parent.Expanded
+                              If .Visible Then
+                                  Node_SetBounds(node)
+                                  ._VisibleIndex = VisibleIndex
+                                  VisibleIndex += 1
+                                  If .Bounds.Right > RollingWidth Then RollingWidth = .Bounds.Right
+                                  RollingHeight += .Height
+                                  If Not .HeaderLevel = 255 Then
+                                      Dim nodeHead As ColumnHead = ColumnHeaders(.HeaderLevel)(.ColumnIndex)
+                                      nodeHead.ContentWidth = .Bounds.Width
+                                      Dim headWidths As Integer = .Bounds.Right
+                                      .Fields.ForEach(Sub(fieldNode)
+                                                          Dim fieldHead As ColumnHead = ColumnHeaders(.HeaderLevel)(fieldNode.ColumnIndex)
+                                                          fieldHead.ContentWidth = fieldNode.TextWidth
+                                                          headWidths += fieldHead.Width
+                                                      End Sub)
+                                      If headWidths > RollingWidth Then RollingWidth = headWidths
+                                  End If
+                                  If .HasChildren Then RefreshNodesBounds_Lines(.Children)
+                              End If
+                              NodeIndex += 1
+                          End With
+                          '/// Test
+                          If FavoritesFirst And node.CanFavorite Then node.Children.SortAscending(False) 'Do not let the Sort require repaint as it cycles back here to an infinate loop
+                      End Sub)
 
     End Sub
-    Private Sub RefreshNodeBounds_Lines(Node As Node)
+    Private Sub Node_SetBounds(node As Node)
 
         Dim y As Integer = RollingHeight - VScroll.Value
         Dim HorizontalSpacing As Integer = 3
-
-        With Node
+        With node
+#Region " S E T   B O U N D S "
             Dim x As Integer = 0 - If(.IsRoot, HScroll.Value, 0)
             If ExpandBeforeText Then
                 '■■■■■■■■■■■■■ P r e f e r
 #Region " +- Icon precedes Text "
                 'Bounds.X cascades from [1] Favorite, [2] Checkbox, [3] Image, [4] ShowHide, [5] Text
                 REM FAVORITE
-                ._Bounds_Favorite.X = x + Offset.X + HorizontalSpacing + If(IsNothing(.Parent), If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right + HorizontalSpacing)
+                Dim leftMost As Integer = Offset.X + HorizontalSpacing + If(IsNothing(.Parent), If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right + HorizontalSpacing)
+                If .IsFieldParent Then leftMost = ColumnHeaders(.HeaderLevel)(0).Bounds.Right
+                ._Bounds_Favorite.X = x + leftMost
                 ._Bounds_Favorite.Y = y + CInt((.Height - FavoriteImage.Height) / 2)
                 ._Bounds_Favorite.Width = If(.CanFavorite, FavoriteImage.Width, 0)
                 ._Bounds_Favorite.Height = If(.CanFavorite, FavoriteImage.Height, .Height)
@@ -1870,11 +1939,12 @@ Public Class TreeViewer
                 fieldNode._Bounds.Y = .Bounds.Y
                 fieldNode._Bounds.Height = .Bounds.Height
             Next
+#End Region
         End With
 
     End Sub
 
-    '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ SCROLLING, SCROLLING, SCROLLING
+    '//////////////////////////////////// SCROLLING, SCROLLING, SCROLLING
     Private Sub OnScrolled(ByVal sender As Object, e As ScrollEventArgs) Handles HScroll.Scroll, VScroll.Scroll
 
         If e.ScrollOrientation = ScrollOrientation.HorizontalScroll Then
@@ -1953,7 +2023,7 @@ Public Class TreeViewer
 
     End Sub
 #End Region
-#Region " METHODS / FUNCTIONS "
+
     Public Function HitTest(Location As Point) As HitRegion
 
         Dim hotSpot As New HitRegion
@@ -2054,10 +2124,9 @@ Public Class TreeViewer
         Next
 
     End Sub
-#End Region
 End Class
 
-REM //////////////// NODE COLLECTION \\\\\\\\\\\\\\\\
+'■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ NODE COLLECTION
 Public NotInheritable Class NodeCollection
     Inherits List(Of Node)
     Private _SortOrder As New SortOrder
@@ -2074,12 +2143,12 @@ Public NotInheritable Class NodeCollection
         End Set
     End Property
     Friend Sub New(TreeViewer As TreeViewer)
-        _TreeViewer = TreeViewer
+        _Tree = TreeViewer
     End Sub
-    Private _TreeViewer As TreeViewer
-    Public ReadOnly Property TreeViewer As TreeViewer
+    Private _Tree As TreeViewer
+    Public ReadOnly Property Tree As TreeViewer
         Get
-            Return _TreeViewer
+            Return _Tree
         End Get
     End Property
     Friend _Parent As Node
@@ -2189,14 +2258,14 @@ Public NotInheritable Class NodeCollection
                 ._Index = Count
                 If Parent Is Nothing Then   ' *** ROOT NODE
                     'mTreeViewer was set when TreeViewer was created with New NodeCollection
-                    ._TreeViewer = TreeViewer
+                    ._Tree = Tree
                     ._Visible = True
                     ._Level = 0
 
                 Else                        ' *** CHILD NODE
                     REM /// Get TreeViewer value from Parent. A Node Collection shares some Node properties
-                    _TreeViewer = Parent.TreeViewer
-                    ._TreeViewer = Parent.TreeViewer
+                    _Tree = Parent.Tree
+                    ._Tree = Parent.Tree
                     ._Parent = Parent
                     ._Level = Parent.Level + 1
                     If Parent.Expanded Then
@@ -2211,10 +2280,10 @@ Public NotInheritable Class NodeCollection
                     End If
 
                 End If
-                If TreeViewer IsNot Nothing Then
-                    .CanFavorite = TreeViewer.CanFavorite
-                    .Font = TreeViewer.Font
-                    TreeViewer.NodeTimer_Start(AddNode)
+                If Tree IsNot Nothing Then
+                    .CanFavorite = Tree.CanFavorite
+                    .Font = Tree.Font
+                    Tree.NodeTimer_Start(AddNode)
                 End If
             End With
             MyBase.Add(AddNode)
@@ -2228,7 +2297,7 @@ Public NotInheritable Class NodeCollection
             For Each Node As Node In Nodes
                 Add(Node)
             Next
-            If Not IsNothing(TreeViewer) Then TreeViewer.RequiresRepaint()
+            Tree?.RequiresRepaint()
         End If
         Return Nodes
 
@@ -2239,7 +2308,7 @@ Public NotInheritable Class NodeCollection
             For Each Node As Node In Nodes
                 Add(Node)
             Next
-            If Not IsNothing(TreeViewer) Then TreeViewer.RequiresRepaint()
+            Tree?.RequiresRepaint()
         End If
         Return Nodes
 
@@ -2252,7 +2321,7 @@ Public NotInheritable Class NodeCollection
                 Add(NewNode)
                 NewNodes.Add(New Node With {.Text = NewNode})
             Next
-            If Not IsNothing(TreeViewer) Then TreeViewer.RequiresRepaint()
+            Tree?.RequiresRepaint()
         End If
         Return NewNodes.ToArray
 
@@ -2260,24 +2329,24 @@ Public NotInheritable Class NodeCollection
     Public Overloads Function Clear(ByVal Nodes As NodeCollection) As NodeCollection
 
         Clear()
-        If Not IsNothing(TreeViewer) Then TreeViewer.RequiresRepaint()
+        Tree?.RequiresRepaint()
         Return Nodes
 
     End Function
     Public Overloads Function Insert(Index As Integer, InsertNode As Node) As Node
 
         If InsertNode IsNot Nothing Then
-            If IsNothing(TreeViewer) Then
+            If IsNothing(Tree) Then
                 MyBase.Insert(Index, InsertNode)
             Else
-                If TreeViewer.Ancestors.All.Contains(InsertNode) Then
+                If Tree.Ancestors.All.Contains(InsertNode) Then
                     'Throw New ArgumentException("This node already exists in the Treeviewer. Try Removing the Node")
 
                 Else
                     MyBase.Insert(Index, InsertNode)
-                    InsertNode._TreeViewer = TreeViewer
+                    InsertNode._Tree = Tree
                     InsertNode._Parent = Parent
-                    TreeViewer.NodeTimer_Start(InsertNode)
+                    Tree.NodeTimer_Start(InsertNode)
                 End If
             End If
         End If
@@ -2288,22 +2357,26 @@ Public NotInheritable Class NodeCollection
 
         If RemoveNode IsNot Nothing Then
             MyBase.Remove(RemoveNode)
-            TreeViewer.NodeTimer_Start(RemoveNode)
+            Tree.NodeTimer_Start(RemoveNode)
         End If
         Return RemoveNode
 
     End Function
     Public Shadows Function Item(ByVal Name As String) As Node
+
         Dim Nodes As New List(Of Node)((From N In Me Where N.Name = Name).ToArray)
         Return If(Nodes.Any, Nodes.First, Nothing)
+
     End Function
     Public Shadows Function ItemByTag(ByVal TagObject As Object) As Node
+
         Dim Nodes As New List(Of Node)((From N In All Where N.Tag Is TagObject).ToArray)
         Return If(Nodes.Any, Nodes.First, Nothing)
+
     End Function
     Friend Sub SortAscending(Optional repaint As Boolean = True)
 
-        If TreeViewer?.FavoritesFirst Then
+        If Tree?.FavoritesFirst Then
             Select Case DataType
                 Case GetType(String)
                     Sort(Function(x, y)
@@ -2380,15 +2453,15 @@ Public NotInheritable Class NodeCollection
             End Select
         End If
         If repaint Then
-            TreeViewer?.RequiresRepaint()
+            Tree?.RequiresRepaint()
         Else
-            TreeViewer?.Invalidate()
+            Tree?.Invalidate()
         End If
 
     End Sub
     Friend Sub SortDescending(Optional repaint As Boolean = True)
 
-        If TreeViewer?.FavoritesFirst Then
+        If Tree?.FavoritesFirst Then
             Select Case DataType
                 Case GetType(String)
                     Sort(Function(y, x)
@@ -2464,22 +2537,22 @@ Public NotInheritable Class NodeCollection
 
             End Select
         End If
-        If repaint Then TreeViewer?.RequiresRepaint()
+        If repaint Then Tree?.RequiresRepaint()
 
     End Sub
 End Class
 
-REM //////////////// NODE \\\\\\\\\\\\\\\\
+'■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ NODE
 Public Class Node
     Implements IDisposable
     Public Sub New()
-        Children = New NodeCollection(_TreeViewer) With {._Parent = Me}
-        Fields = New NodeCollection(_TreeViewer) With {._Parent = Me}
+        Children = New NodeCollection(_Tree) With {._Parent = Me}
+        Fields = New NodeCollection(_Tree) With {._Parent = Me}
     End Sub
     Public Sub New(nodeText As String)
         Text = nodeText
-        Children = New NodeCollection(_TreeViewer) With {._Parent = Me}
-        Fields = New NodeCollection(_TreeViewer) With {._Parent = Me}
+        Children = New NodeCollection(_Tree) With {._Parent = Me}
+        Fields = New NodeCollection(_Tree) With {._Parent = Me}
     End Sub
     Public Enum SeparatorPosition
         None
@@ -2487,10 +2560,10 @@ Public Class Node
         Below
     End Enum
 
-    Friend _TreeViewer As TreeViewer
-    Public ReadOnly Property TreeViewer As TreeViewer
+    Friend _Tree As TreeViewer
+    Public ReadOnly Property Tree As TreeViewer
         Get
-            Return _TreeViewer
+            Return _Tree
         End Get
     End Property
     Friend _Parent As Node
@@ -2513,7 +2586,19 @@ Public Class Node
             Return ColumnIndex_
         End Get
     End Property
-    Friend IsField_ As Boolean
+    Friend IsHeader_ As Boolean = False
+    Friend ReadOnly Property IsHeader As Boolean
+        Get
+            Return IsHeader_
+        End Get
+    End Property
+    Friend IsFieldParent_ As Boolean = False
+    Friend ReadOnly Property IsFieldParent As Boolean
+        Get
+            Return IsFieldParent_
+        End Get
+    End Property
+    Friend IsField_ As Boolean = False
     Friend ReadOnly Property IsField As Boolean
         Get
             Return IsField_
@@ -2545,14 +2630,14 @@ Public Class Node
     Private _CheckBox As Boolean = False
     Public Property CheckBox As Boolean
         Get
-            If TreeViewer Is Nothing Then
+            If Tree Is Nothing Then
                 Return _CheckBox
             Else
-                If TreeViewer.CheckBoxes = TreeViewer.CheckState.All Then
+                If Tree.CheckBoxes = TreeViewer.CheckState.All Then
                     _CheckBox = True
-                ElseIf TreeViewer.CheckBoxes = TreeViewer.CheckState.None Then
+                ElseIf Tree.CheckBoxes = TreeViewer.CheckState.None Then
                     _CheckBox = False
-                ElseIf TreeViewer.CheckBoxes = TreeViewer.CheckState.Mixed Then
+                ElseIf Tree.CheckBoxes = TreeViewer.CheckState.Mixed Then
 
                 End If
                 Return _CheckBox
@@ -2561,11 +2646,11 @@ Public Class Node
         Set(value As Boolean)
             If value <> _CheckBox Then
                 _CheckBox = value
-                If TreeViewer Is Nothing Then
+                If Tree Is Nothing Then
                 Else
                     If value Then
-                        If TreeViewer.CheckBoxes = TreeViewer.CheckState.None Then
-                            TreeViewer.CheckBoxes = TreeViewer.CheckState.Mixed
+                        If Tree.CheckBoxes = TreeViewer.CheckState.None Then
+                            Tree.CheckBoxes = TreeViewer.CheckState.Mixed
                         End If
                     End If
                 End If
@@ -2649,6 +2734,14 @@ Public Class Node
             Text = Format(Value_, Header.GridFormat.FormatString)
         End Set
     End Property
+    Friend ReadOnly Property TextWidth As Integer
+    Private Sub TextWidth_Set()
+
+        _TextWidth = TextRenderer.MeasureText(If(Text, String.Empty), Font).Width
+        _Bounds.Width = _TextWidth
+        RequiresRepaint()
+
+    End Sub 'Only changes to Font & Text affect the width
     Private _Text As String
     Public Property Text As String
         Get
@@ -2657,23 +2750,34 @@ Public Class Node
         Set(value As String)
             If Not _Text = value Then
                 _Text = Replace(value, "&", "&&")
-                _Bounds.Width = TextRenderer.MeasureText(value, Font).Width
-                RequiresRepaint()
+                TextWidth_Set()
             End If
         End Set
     End Property
     Public Property TipText As String
     Public ReadOnly Property Options As New List(Of Object)
     Public ReadOnly Property ChildOptions As New List(Of Object)
-    Private _Font As New Font("Calibri", 9)
+    Private Font_ As Font
     Public Property Font As Font
         Get
-            Return _Font
+            If Font_ Is Nothing Then
+                If Tree Is Nothing Then
+                    Return New Font("Calibri", 9)
+                Else
+                    Font_ = Tree.Font
+                    Return Font_
+                End If
+            Else
+                Return Font_
+            End If
         End Get
         Set(value As Font)
-            _Font = value
-            _Bounds.Width = TextRenderer.MeasureText(Text, Font).Width
-            RequiresRepaint()
+            If value IsNot Nothing Then
+                If Font_ Is Nothing OrElse value.Name <> Font_.Name And value.Style <> Font_.Style And value.Size <> Font_.Size Then
+                    Font_ = value
+                    TextWidth_Set()
+                End If
+            End If
         End Set
     End Property
     Private _ForeColor As Color = Color.Black
@@ -2851,7 +2955,7 @@ Public Class Node
         Get
             Dim BrothersSistersAndMe As New List(Of Node)
             If IsRoot Then
-                If Not TreeViewer Is Nothing Then BrothersSistersAndMe.AddRange(TreeViewer.Ancestors)
+                If Not Tree Is Nothing Then BrothersSistersAndMe.AddRange(Tree.Ancestors)
 
             Else
                 BrothersSistersAndMe.AddRange(Parent.Children)
@@ -2905,7 +3009,7 @@ Public Class Node
     End Property
     Public ReadOnly Property Header As ColumnHead
         Get
-            Return TreeViewer?.ColumnHeaders(HeaderLevel)(ColumnIndex)
+            Return Tree?.ColumnHeaders(HeaderLevel)(ColumnIndex)
         End Get
     End Property
     Friend DataType_ As Type = Nothing
@@ -2933,7 +3037,7 @@ Public Class Node
         Set(value As Boolean)
             If value <> Favorite_ Then
                 Favorite_ = value
-                If TreeViewer?.FavoritesFirst Then Parent?.Children.SortAscending()
+                If Tree?.FavoritesFirst Then Parent?.Children.SortAscending()
                 RequiresRepaint()
             End If
         End Set
@@ -2956,12 +3060,12 @@ Public Class Node
     Friend _Clicked As Boolean
     Private Sub RequiresRepaint()
 
-        If Not IsNothing(TreeViewer) Then
+        If Not IsNothing(Tree) Then
             If _Clicked Then
                 _Clicked = False
-                TreeViewer.RequiresRepaint()
+                Tree.RequiresRepaint()
             Else
-                TreeViewer.NodeTimer_Start(Me)
+                Tree.NodeTimer_Start(Me)
             End If
         End If
 
@@ -3064,8 +3168,7 @@ Public Class Node
         If Not DisposedValue Then
             If disposing Then
                 ' TODO: dispose managed state (managed objects).
-                _Font.Dispose()
-                Font.Dispose()
+                Font_.Dispose()
             End If
             ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
             ' TODO: set large fields to null.
@@ -3087,6 +3190,7 @@ Public Class Node
 #End Region
 End Class
 
+'■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ HEADER LEVELS
 Public Class HeaderLevels
     Inherits List(Of ColumnHeadCollection)
     Friend Event Changed()
@@ -3190,6 +3294,9 @@ Public Class HeaderLevels
                 .Parent_ = Parent
                 .Styles = Styles
                 .MouseStyles = MouseStyles
+                .ForEach(Sub(header)
+                             header.Font = Parent.Font
+                         End Sub)
                 AddHandler .Changed, AddressOf OnChanged
             End With
             MyBase.Add(addHeaders)
@@ -3218,7 +3325,7 @@ Public Class HeaderLevels
     End Sub
 End Class
 
-REM //////////////// HEADER COLLECTION \\\\\\\\\\\\\\\\
+'■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ HEADER COLLECTION
 Public Class ColumnHeadCollection
     Inherits List(Of ColumnHead)
     Implements IDisposable
@@ -3357,9 +3464,7 @@ Public Class ColumnHeadCollection
     End Function
     Public Shadows Function Add(ByVal Text As String) As ColumnHead
 
-        Dim addHeader As New ColumnHead(Text) With {
-            .Width = 3 + TextRenderer.MeasureText(.Text, Styles.Font).Width + 3
-        }
+        Dim addHeader As New ColumnHead(Text)
         Return Add(addHeader)
 
     End Function
@@ -3367,7 +3472,7 @@ Public Class ColumnHeadCollection
 
         Dim Header As New ColumnHead(Text) With {
             .Text = Text,
-            .Width = Width
+            .Width_ = Width
         }
         Return Add(Header)
 
@@ -3436,7 +3541,8 @@ Public Class ColumnHeadCollection
     End Sub
 #End Region
 End Class
-REM //////////////// HEADER \\\\\\\\\\\\\\\\
+
+'■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ COLUMN HEAD
 <Serializable> Public Class ColumnHead
     Implements IDisposable
 
@@ -3507,29 +3613,58 @@ REM //////////////// HEADER \\\\\\\\\\\\\\\\
             Return Name_
         End Get
     End Property
+    Private Font_ As Font
+    Public Property Font As Font
+        Get
+            Return Font_
+        End Get
+        Set(value As Font)
+            If value IsNot Nothing Then
+                If Font_ Is Nothing OrElse value.Name <> Font_.Name And value.Style <> Font_.Style And value.Size <> Font_.Size Then
+                    Font_ = value
+                    TextWidth_Set()
+                End If
+            End If
+        End Set
+    End Property
+    Friend ReadOnly Property TextWidth As Integer
+    Private Sub TextWidth_Set()
+        _TextWidth = TextRenderer.MeasureText(If(Text, String.Empty), Font).Width
+    End Sub
     Private Text_ As String = "Header"
-    Property Text As String
+    Public Property Text As String
         Get
             Return Text_
         End Get
-        Set(ByVal Value As String)
-            If Text_ <> Value Then
-                Text_ = Value
+        Set(ByVal value As String)
+            If Text_ <> value Then
+                Text_ = value
+                TextWidth_Set()
                 RaiseEvent Changed(Me, Nothing)
             End If
         End Set
     End Property
-    Private Width_ As Integer
-    Property Width As Integer
+    Friend ContentWidth_ As Integer
+    Public Property ContentWidth As Integer
         Get
-            Return Width_ + If(SortOrder = SortOrder.None, 0, 2 + SortIcon.Width + 2)
+            Return ContentWidth_
         End Get
-        Set(ByVal Value As Integer)
-            If Width_ <> Value Then
-                Width_ = Value
-                RaiseEvent Changed(Me, Nothing)
-            End If
+        Set(value As Integer)
+            If value > ContentWidth_ Then ContentWidth_ = value
         End Set
+    End Property
+    Friend Width_ As Integer
+    Public ReadOnly Property Width As Integer
+        Get
+            Return {_TextWidth, ContentWidth}.Max + If(SortOrder = SortOrder.None, 0, SortIcon.Width)
+        End Get
+        'Set(ByVal Value As Integer)
+        '    If Width_ <> Value Then
+        '        Width_ = Value
+        '        ContentWidth_ = Value
+        '        RaiseEvent Changed(Me, Nothing)
+        '    End If
+        'End Set
     End Property
     Private Image_ As Image = Nothing
     Property Image As Image
@@ -3572,6 +3707,7 @@ REM //////////////// HEADER \\\\\\\\\\\\\\\\
         If Not disposedValue Then
             If disposing Then
                 ' TODO: dispose managed state (managed objects).
+                Font_.Dispose()
                 Style_.Dispose()
                 MouseStyle_.Dispose()
             End If

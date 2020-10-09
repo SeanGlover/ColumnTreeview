@@ -58,7 +58,6 @@ Public Class ColumnEventArgs
 End Class
 Public Class AlignFormat
     Implements IEquatable(Of AlignFormat)
-    Implements IDisposable
     Public Enum TypeGroup
         None
         Booleans
@@ -69,7 +68,7 @@ Public Class AlignFormat
         Images
         Strings
     End Enum
-    Public ReadOnly Property Alignment As StringFormat
+    Public ReadOnly Property HorizontalAlignment As StringAlignment
     Public ReadOnly Property DataType As Type
     Public ReadOnly Property FormatString As String
     Public ReadOnly Property Group As TypeGroup
@@ -80,19 +79,13 @@ Public Class AlignFormat
 
         Select Case DataType
             Case GetType(Boolean), GetType(Byte), GetType(Short), GetType(Integer), GetType(Long), GetType(Date), GetType(DateAndTime), GetType(Image), GetType(Bitmap), GetType(Icon)
-                Alignment = New StringFormat With {
-    .Alignment = StringAlignment.Center,
-    .LineAlignment = StringAlignment.Center}
+                HorizontalAlignment = StringAlignment.Center
 
             Case GetType(Decimal), GetType(Double)
-                Alignment = New StringFormat With {
-    .Alignment = StringAlignment.Far,
-    .LineAlignment = StringAlignment.Center}
+                HorizontalAlignment = StringAlignment.Far
 
             Case Else
-                Alignment = New StringFormat With {
-    .Alignment = StringAlignment.Near,
-    .LineAlignment = StringAlignment.Center}
+                HorizontalAlignment = StringAlignment.Near
 
         End Select
 
@@ -133,7 +126,7 @@ Public Class AlignFormat
 
     End Sub
     Public Overrides Function GetHashCode() As Integer
-        Return Alignment.GetHashCode Xor DataType.GetHashCode Xor FormatString.GetHashCode Xor Group.GetHashCode
+        Return HorizontalAlignment.GetHashCode Xor DataType.GetHashCode Xor FormatString.GetHashCode Xor Group.GetHashCode
     End Function
     Public Overloads Function Equals(ByVal other As AlignFormat) As Boolean Implements IEquatable(Of AlignFormat).Equals
         Return DataType Is other?.DataType
@@ -151,33 +144,6 @@ Public Class AlignFormat
             Return False
         End If
     End Function
-
-#Region "IDisposable Support"
-    Private DisposedValue As Boolean ' To detect redundant calls IDisposable
-    Protected Overridable Sub Dispose(disposing As Boolean)
-        If Not DisposedValue Then
-            If disposing Then
-                ' TODO: dispose managed state (managed objects).
-                Alignment.Dispose()
-            End If
-            ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
-            ' TODO: set large fields to null.
-        End If
-        DisposedValue = True
-    End Sub
-    ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
-    Protected Overrides Sub Finalize()
-        ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
-        Dispose(False)
-        MyBase.Finalize()
-    End Sub
-    ' This code added by Visual Basic to correctly implement the disposable pattern.
-    Public Sub Dispose() Implements IDisposable.Dispose
-        ' Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
-        Dispose(True)
-        GC.SuppressFinalize(Me)
-    End Sub
-#End Region
 End Class
 Public Class NodeEventArgs
     Inherits EventArgs
@@ -444,11 +410,10 @@ Public Class TreeViewer
                                     End If
                                 End If
                                 Using textBrush As New SolidBrush(.ForeColor)
-                                    Using sf As StringFormat = If(.Header Is Nothing, New StringFormat With {
-                                        .Alignment = StringAlignment.Center,
-                                        .LineAlignment = StringAlignment.Center
-                                    },
-                                    .Header.GridFormat.Alignment)
+                                    Using sf As New StringFormat With {
+                                            .Alignment = If(Node.Header Is Nothing, StringAlignment.Near, Node.Header.GridFormat.HorizontalAlignment),
+                                            .LineAlignment = StringAlignment.Center
+                                        }
                                         e.Graphics.DrawString(If(mouseInTip, .TipText, .Text),
                                                                   .Font,
                                                                   textBrush,
@@ -515,9 +480,10 @@ Public Class TreeViewer
                                                 ._Bounds = nodeColumnBounds
                                                 If nodeColumnBounds.Right > 0 And nodeColumnBounds.Left < Width Then
                                                     Using textBrush As New SolidBrush(.ForeColor)
-                                                        Using sf As New StringFormat
-                                                            sf.LineAlignment = StringAlignment.Center
-                                                            sf.Alignment = If(.Header Is Nothing, StringAlignment.Center, .Header.GridFormat.Alignment.Alignment)
+                                                        Using sf As New StringFormat With {
+                                                                .Alignment = fieldNode.Header.GridFormat.HorizontalAlignment,
+                                                                .LineAlignment = StringAlignment.Center
+    }
                                                             e.Graphics.DrawString(If(mouseInTip, .TipText, .Text),
                                                                                       .Font,
                                                                                       textBrush,
@@ -1409,7 +1375,6 @@ Public Class TreeViewer
                                                              End Function)
                                       End If
                                   End Sub)
-                StopMe = True
                 RequiresRepaint()
                 RaiseEvent ColumnClicked(Me, New ColumnEventArgs(HitRegion.Column))
             End If
@@ -1436,6 +1401,7 @@ Public Class TreeViewer
                             hitInfo.Node.Expand()
                         End If
                     End If
+                    If hitInfo.Node IsNot Nothing AndAlso hitInfo.Node.Text = "DistributedSoftware" Then StopMe = True
                     LastMouseNode = hitInfo.Node
                     Invalidate()
                 End If
@@ -1831,7 +1797,7 @@ Public Class TreeViewer
         Dim HorizontalSpacing As Integer = 3
 
         With Node
-            Dim x As Integer = 0 '- If(.IsRoot, HScroll.Value, 0)
+            Dim x As Integer = 0 - If(.IsRoot, HScroll.Value, 0)
             If ExpandBeforeText Then
                 '■■■■■■■■■■■■■ P r e f e r
 #Region " +- Icon precedes Text "

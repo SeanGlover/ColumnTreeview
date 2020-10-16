@@ -1207,18 +1207,7 @@ Public Class TreeViewer
             Return CInt(Ancestors.All.Average(Function(a) a.Height))
         End Get
     End Property
-    Public ReadOnly Property SelectedNodes As List(Of Node)
-        Get
-            Dim nodesSelected As New List(Of Node)
-            Ancestors.All.ForEach(Sub(node)
-                                      If node.Selected Then nodesSelected.Add(node)
-                                      node.Fields.ForEach(Sub(field)
-                                                              If field.Selected Then nodesSelected.Add(field)
-                                                          End Sub)
-                                  End Sub)
-            Return nodesSelected
-        End Get
-    End Property
+    Public ReadOnly Property SelectedNodes As New List(Of Node)
     Public ReadOnly Property Roots As List(Of Node)
         Get
             Return Ancestors.All.Where(Function(n) n.Level = 0).ToList
@@ -1363,8 +1352,14 @@ Public Class TreeViewer
                                         For Each Node In SelectedNodes.Except({HitNode})
                                             Node._Selected = False
                                         Next
+                                        SelectedNodes.Clear()
                                     End If
                                     HitNode._Selected = Not HitNode.Selected
+                                    If HitNode.Selected Then
+                                        SelectedNodes.Add(HitNode)
+                                    Else
+                                        SelectedNodes.Remove(HitNode)
+                                    End If
                                     If e.Button = MouseButtons.Left Then
                                         RaiseEvent NodeClicked(Me, New NodeEventArgs(HitRegion))
 
@@ -1531,7 +1526,7 @@ Public Class TreeViewer
     End Sub
     Protected Overrides Sub OnKeyDown(e As KeyEventArgs)
 
-        If e IsNot Nothing AndAlso e.Modifiers = Keys.Control AndAlso e.KeyCode = Keys.C Then
+        If e IsNot Nothing AndAlso e.Modifiers = Keys.Control AndAlso e.KeyCode = Keys.C And SelectedNodes.Any Then
             Dim Nodes2Clipboard As New List(Of String)(From sn In SelectedNodes Select sn.Text)
             Clipboard.SetText(Join(Nodes2Clipboard.ToArray, vbNewLine))
         End If

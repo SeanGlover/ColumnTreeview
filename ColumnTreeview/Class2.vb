@@ -1823,6 +1823,7 @@ Public Class TreeViewer
     End Sub
     Private Sub RefreshNodesBounds_Lines(Nodes As NodeCollection)
 
+        NodeIndex = 0
         Nodes.ForEach(Sub(node)
                           With node
                               ._Index = NodeIndex
@@ -2600,7 +2601,7 @@ Public Class Node
         End Get
     End Property
     Friend Row_ As DataRow
-    Friend ReadOnly Property Row As DataRow
+    Public ReadOnly Property Row As DataRow
         Get
             Return Row_
         End Get
@@ -2885,33 +2886,6 @@ Public Class Node
         _Path.Add(New KeyValuePair(Of Integer, String)(_Node.Level, _Node.Text))
         If Not IsNothing(_Node.Parent) Then GetTextPath(_Node.Parent)
     End Sub
-    Public ReadOnly Property Parents As List(Of Node)
-        Get
-            Dim _Parents As New List(Of Node)
-            Dim ParentNode As Node = Parent
-            Do While ParentNode IsNot Nothing
-                _Parents.Add(ParentNode)
-                ParentNode = ParentNode.Parent
-            Loop
-            Return _Parents
-        End Get
-    End Property
-    Private Sub GetDescendants(_Node As Node)
-
-        For Each Child In _Node.Children
-            _Descendants.Add(Child)
-            If Child.HasChildren Then GetDescendants(Child)
-        Next
-
-    End Sub
-    Private ReadOnly _Descendants As New List(Of Node)
-    Public ReadOnly Property Descendants As List(Of Node)
-        Get
-            _Descendants.Clear()
-            GetDescendants(Me)
-            Return _Descendants
-        End Get
-    End Property
     Private _Separator As SeparatorPosition = SeparatorPosition.None
     Public Property Separator As SeparatorPosition
         Get
@@ -2946,60 +2920,57 @@ Public Class Node
             Return _VisibleIndex
         End Get
     End Property
+    Public ReadOnly Property Parents As List(Of Node)
+        Get
+            Dim _Parents As New List(Of Node)
+            Dim ParentNode As Node = Parent
+            Do While ParentNode IsNot Nothing
+                _Parents.Add(ParentNode)
+                ParentNode = ParentNode.Parent
+            Loop
+            Return _Parents
+        End Get
+    End Property
+    Private Sub GetDescendants(_Node As Node)
+
+        For Each Child In _Node.Children
+            _Descendants.Add(Child)
+            If Child.HasChildren Then GetDescendants(Child)
+        Next
+
+    End Sub
+    Private ReadOnly _Descendants As New List(Of Node)
+    Public ReadOnly Property Descendants As List(Of Node)
+        Get
+            _Descendants.Clear()
+            GetDescendants(Me)
+            Return _Descendants
+        End Get
+    End Property
     Public ReadOnly Property Siblings As List(Of Node)
         Get
-            Dim BrothersSistersAndMe As New List(Of Node)
-            If IsRoot Then
-                If Not Tree Is Nothing Then BrothersSistersAndMe.AddRange(Tree.Ancestors)
-
-            Else
-                BrothersSistersAndMe.AddRange(Parent.Children)
-
-            End If
+            Dim BrothersSistersAndMe As New List(Of Node)(If(IsRoot, Tree?.Ancestors, Parent.Children))
             BrothersSistersAndMe.Sort(Function(x, y) x.Index.CompareTo(y.Index))
             Return BrothersSistersAndMe
         End Get
     End Property
     Public ReadOnly Property FirstSibling As Node
         Get
-            If Siblings.Any Then
-                Return Siblings.First
-            Else
-                Return Nothing
-            End If
-        End Get
-    End Property
-    Public ReadOnly Property IsFirstSibling As Boolean
-        Get
-            Return FirstSibling Is Me
-        End Get
-    End Property
-    Public ReadOnly Property NextSibling As Node
-        Get
-            If Siblings.Any Then
-                If Me Is LastSibling Then
-                    Return Nothing
-                Else
-                    Return Siblings(Index + 1)
-                End If
-            Else
-                Return Nothing
-            End If
-
+            Return Siblings.First 'Always Siblings since Me is included
         End Get
     End Property
     Public ReadOnly Property LastSibling As Node
         Get
-            If Siblings.Any Then
-                Return Siblings.Last
-            Else
-                Return Nothing
-            End If
+            Return Siblings.Last 'Always Siblings since Me is included
         End Get
     End Property
-    Public ReadOnly Property IsLastSibling As Boolean
+    Public ReadOnly Property NextSibling As Node
         Get
-            Return LastSibling Is Me
+            If Me Is LastSibling Then
+                Return Nothing
+            Else
+                Return Siblings(Index + 1)
+            End If
         End Get
     End Property
     Public ReadOnly Property Header As ColumnHead

@@ -1866,8 +1866,8 @@ Public Class TreeViewer
 #Region " +- Icon precedes Text "
                 'Bounds.X cascades from [1] Favorite, [2] Checkbox, [3] Image, [4] ShowHide, [5] Text
                 REM FAVORITE
-                Dim leftMost As Integer = Offset.X + HorizontalSpacing + If(IsNothing(.Parent), If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right + HorizontalSpacing)
-                If .IsFieldParent Then leftMost = ColumnHeaders(.HeaderLevel)(0).Bounds.Right
+                Dim leftMost As Integer = Offset.X + HorizontalSpacing + If(.Parent Is Nothing, If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right)
+                'If .IsFieldParent Then leftMost = ColumnHeaders(.HeaderLevel)(0).Bounds.Right
                 ._Bounds_Favorite.X = x + leftMost
                 ._Bounds_Favorite.Y = y + CInt((.Height - FavoriteImage.Height) / 2)
                 ._Bounds_Favorite.Width = If(.CanFavorite, FavoriteImage.Width, 0)
@@ -1897,6 +1897,9 @@ Public Class TreeViewer
                 ._Bounds.X = ._Bounds_ShowHide.Right + If(._Bounds_ShowHide.Width = 0, 0, HorizontalSpacing)
                 ._Bounds.Y = y
                 ._Bounds.Height = .Height
+                If .IsFieldParent And ._Bounds.Right > ColumnHeaders(.HeaderLevel)(1).Bounds.Right Then
+                    ColumnHeaders(.HeaderLevel)(1).ContentWidth = ._Bounds.Right - ColumnHeaders(.HeaderLevel)(0).Bounds.Right
+                End If
 #End Region
             Else
 #Region " +- Icon follows Text "

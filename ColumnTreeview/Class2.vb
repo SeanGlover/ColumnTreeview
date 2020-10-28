@@ -226,7 +226,7 @@ Public Class TreeViewer
     Private RollingWidth As Integer
 
     '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ I M A G E S
-    Private FavoriteImage As Image
+    Private ReadOnly FavoriteImage As Image
     Private ExpandImage As Image
     Private CollapseImage As Image
 
@@ -298,6 +298,16 @@ Public Class TreeViewer
         None
         All
         Mixed
+    End Enum
+    Public Enum CheckStyle
+        Slide
+        Check
+    End Enum
+    Public Enum ExpandStyle
+        PlusMinus
+        Arrow
+        Book
+        LightBulb
     End Enum
     Public Sub New()
 
@@ -434,19 +444,20 @@ Public Class TreeViewer
                                 If .CanFavorite Then e.Graphics.DrawImage(If(.Favorite, My.Resources.star, My.Resources.starEmpty), .Bounds_Favorite)
                                 If .CheckBox Then
                                     '/// Check background as White or Gray
-                                    Using checkBrush As New SolidBrush(If(.PartialChecked, Color.FromArgb(192, Color.LightGray), Color.White))
-                                        e.Graphics.FillRectangle(checkBrush, .Bounds_Check)
-                                    End Using
-                                    '/// Draw the checkmark ( only if .Checked or .PartialChecked )
-                                    If .Checked Or .PartialChecked Then
-                                        Using CheckFont As New Font("Marlett", 10)
-                                            TextRenderer.DrawText(e.Graphics, "a".ToString(InvariantCulture), CheckFont, .Bounds_Check, If(.Checked, Color.Blue, Color.DarkGray), TextFormatFlags.NoPadding Or TextFormatFlags.HorizontalCenter Or TextFormatFlags.Bottom)
-                                        End Using
-                                    End If
+                                    'Using checkBrush As New SolidBrush(If(.PartialChecked, Color.FromArgb(192, Color.LightGray), Color.White))
+                                    '    e.Graphics.FillRectangle(checkBrush, .Bounds_Check)
+                                    'End Using
+                                    ''/// Draw the checkmark ( only if .Checked or .PartialChecked )
+                                    'If .Checked Or .PartialChecked Then
+                                    '    Using CheckFont As New Font("Marlett", 10)
+                                    '        TextRenderer.DrawText(e.Graphics, "a".ToString(InvariantCulture), CheckFont, .Bounds_Check, If(.Checked, Color.Blue, Color.DarkGray), TextFormatFlags.NoPadding Or TextFormatFlags.HorizontalCenter Or TextFormatFlags.Bottom)
+                                    '    End Using
+                                    'End If
                                     '/// Draw the surrounding Check square
-                                    Using Pen As New Pen(Color.Blue, 1)
-                                        e.Graphics.DrawRectangle(Pen, .Bounds_Check)
-                                    End Using
+                                    'Using Pen As New Pen(Color.Blue, 1)
+                                    '    e.Graphics.DrawRectangle(Pen, .Bounds_Check)
+                                    'End Using
+                                    e.Graphics.DrawImage(If(.Checked, My.Resources.slideStateOn, If(.PartialChecked, My.Resources.slideStateMixed, My.Resources.slideStateOff)), .Bounds_Check)
                                     If Hit?.Node Is Node And Hit?.Region = MouseRegion.CheckBox Then
                                         Using checkBrush As New SolidBrush(Color.FromArgb(96, MouseOverColor))
                                             e.Graphics.FillRectangle(checkBrush, .Bounds_Check)
@@ -967,12 +978,6 @@ Public Class TreeViewer
             End If
         End Set
     End Property
-    Public Enum ExpandStyle
-        PlusMinus
-        Arrow
-        Book
-        LightBulb
-    End Enum
     Private Sub UpdateExpandImage()
 
         Select Case _ExpanderStyle
@@ -1173,6 +1178,16 @@ Public Class TreeViewer
         Set(ByVal value As ExpandStyle)
             _ExpanderStyle = value
             UpdateExpandImage()
+        End Set
+    End Property
+    Private CheckboxStyle_ As CheckStyle = CheckStyle.Slide
+    Public Property CheckboxStyle As CheckStyle
+        Get
+            Return CheckboxStyle_
+        End Get
+        Set(ByVal value As CheckStyle)
+            CheckboxStyle_ = value
+            RefreshNodesBounds_Lines(Ancestors)
         End Set
     End Property
     Public ReadOnly Property DropHighlightNode As Node
@@ -1876,9 +1891,15 @@ Public Class TreeViewer
 
                 REM CHECKBOX
                 ._Bounds_Check.X = ._Bounds_Favorite.Right + If(._Bounds_Favorite.Width = 0, 0, HorizontalSpacing)
-                ._Bounds_Check.Width = If(.CheckBox, CheckHeight, 0)
-                ._Bounds_Check.Height = CheckHeight
-                ._Bounds_Check.Y = y + CInt((.Height - ._Bounds_Check.Height) / 2)
+                If CheckboxStyle = CheckStyle.Slide Then
+                    ._Bounds_Check.Width = If(.CheckBox, My.Resources.slideStateOff.Width, 0)
+                    ._Bounds_Check.Height = My.Resources.slideStateOff.Height
+                    ._Bounds_Check.Y = y + CInt((.Height - ._Bounds_Check.Height) / 2)
+                Else
+                    ._Bounds_Check.Width = If(.CheckBox, CheckHeight, 0)
+                    ._Bounds_Check.Height = CheckHeight
+                    ._Bounds_Check.Y = y + CInt((.Height - CheckHeight) / 2)
+                End If
 
                 REM IMAGE
                 ._Bounds_Image.X = ._Bounds_Check.Right + If(._Bounds_Check.Width = 0, 0, HorizontalSpacing)

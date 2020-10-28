@@ -119,5 +119,20 @@
   <ItemGroup>
     <None Include="Resources\starEmpty.png" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\slideOn_small.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\slideOff_small.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\slideStateOn.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\slideStateMixed.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\slideStateOff.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>

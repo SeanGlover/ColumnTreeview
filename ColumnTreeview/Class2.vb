@@ -2595,31 +2595,31 @@ Public Class Node
     Public ReadOnly Property Children As NodeCollection
     Public ReadOnly Property Fields As NodeCollection
     Friend HeaderLevel_ As Byte = 255
-    Friend ReadOnly Property HeaderLevel As Byte
+    Public ReadOnly Property HeaderLevel As Byte
         Get
             Return HeaderLevel_
         End Get
     End Property
     Friend ColumnIndex_ As Byte = 255
-    Friend ReadOnly Property ColumnIndex As Byte
+    Public ReadOnly Property ColumnIndex As Byte
         Get
             Return ColumnIndex_
         End Get
     End Property
     Friend IsHeader_ As Boolean = False
-    Friend ReadOnly Property IsHeader As Boolean
+    Public ReadOnly Property IsHeader As Boolean
         Get
             Return IsHeader_
         End Get
     End Property
     Friend IsFieldParent_ As Boolean = False
-    Friend ReadOnly Property IsFieldParent As Boolean
+    Public ReadOnly Property IsFieldParent As Boolean
         Get
             Return IsFieldParent_
         End Get
     End Property
     Friend IsField_ As Boolean = False
-    Friend ReadOnly Property IsField As Boolean
+    Public ReadOnly Property IsField As Boolean
         Get
             Return IsField_
         End Get

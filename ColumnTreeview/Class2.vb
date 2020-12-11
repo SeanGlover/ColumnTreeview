@@ -24,24 +24,24 @@ Public Class HitRegion
     Public Overrides Function GetHashCode() As Integer
         Return Region.GetHashCode Xor Node.GetHashCode
     End Function
-    Public Overloads Function Equals(ByVal other As HitRegion) As Boolean Implements IEquatable(Of HitRegion).Equals
+    Public Overloads Function Equals(other As HitRegion) As Boolean Implements IEquatable(Of HitRegion).Equals
         If other Is Nothing Then
             Return Me Is Nothing
         Else
             Return Region = other.Region AndAlso Node Is other.Node
         End If
     End Function
-    Public Shared Operator =(ByVal value1 As HitRegion, ByVal value2 As HitRegion) As Boolean
+    Public Shared Operator =(value1 As HitRegion, value2 As HitRegion) As Boolean
         If value1 Is Nothing Then
             Return value2 Is Nothing
         Else
             Return value1.Equals(value2)
         End If
     End Operator
-    Public Shared Operator <>(ByVal value1 As HitRegion, ByVal value2 As HitRegion) As Boolean
+    Public Shared Operator <>(value1 As HitRegion, value2 As HitRegion) As Boolean
         Return Not value1 = value2
     End Operator
-    Public Overrides Function Equals(ByVal obj As Object) As Boolean
+    Public Overrides Function Equals(obj As Object) As Boolean
         If TypeOf obj Is HitRegion Then
             Return CType(obj, HitRegion) = Me
         Else
@@ -121,16 +121,16 @@ Public Class AlignFormat
     Public Overrides Function GetHashCode() As Integer
         Return HorizontalAlignment.GetHashCode Xor DataType.GetHashCode Xor FormatString.GetHashCode Xor Group.GetHashCode
     End Function
-    Public Overloads Function Equals(ByVal other As AlignFormat) As Boolean Implements IEquatable(Of AlignFormat).Equals
+    Public Overloads Function Equals(other As AlignFormat) As Boolean Implements IEquatable(Of AlignFormat).Equals
         Return DataType Is other?.DataType
     End Function
-    Public Shared Operator =(ByVal Object1 As AlignFormat, ByVal Object2 As AlignFormat) As Boolean
+    Public Shared Operator =(Object1 As AlignFormat, Object2 As AlignFormat) As Boolean
         Return Object1.Equals(Object2)
     End Operator
-    Public Shared Operator <>(ByVal Object1 As AlignFormat, ByVal Object2 As AlignFormat) As Boolean
+    Public Shared Operator <>(Object1 As AlignFormat, Object2 As AlignFormat) As Boolean
         Return Not Object1 = Object2
     End Operator
-    Public Overrides Function Equals(ByVal obj As Object) As Boolean
+    Public Overrides Function Equals(obj As Object) As Boolean
         If TypeOf obj Is AlignFormat Then
             Return CType(obj, AlignFormat) = Me
         Else
@@ -141,7 +141,7 @@ End Class
 Public Class ColumnEventArgs
     Inherits EventArgs
     Public ReadOnly Property Column As ColumnHead
-    Public Sub New(ByVal Value As ColumnHead)
+    Public Sub New(Value As ColumnHead)
         Column = Value
     End Sub
 End Class
@@ -152,13 +152,13 @@ Public Class NodeEventArgs
     Public ReadOnly Property Hit As HitRegion
     Public ReadOnly Property Nodes As List(Of Node)
     Public ReadOnly Property ProposedText As String = String.Empty
-    Friend Sub New(ByVal Value As Node)
+    Friend Sub New(Value As Node)
         Node = Value
     End Sub
-    Friend Sub New(ByVal Values As List(Of Node))
+    Friend Sub New(Values As List(Of Node))
         Nodes = Values
     End Sub
-    Friend Sub New(ByVal Value As Node, NewText As String)
+    Friend Sub New(Value As Node, NewText As String)
         Node = Value
         ProposedText = NewText
     End Sub
@@ -250,16 +250,16 @@ Public Class TreeViewer
         Public Overrides Function GetHashCode() As Integer
             Return MousePoints.GetHashCode Xor IsDragging.GetHashCode Xor DragNode.GetHashCode Xor DropHighlightNode.GetHashCode
         End Function
-        Public Overloads Function Equals(ByVal other As DragInfo) As Boolean Implements IEquatable(Of DragInfo).Equals
+        Public Overloads Function Equals(other As DragInfo) As Boolean Implements IEquatable(Of DragInfo).Equals
             Return DragNode Is other?.DragNode
         End Function
-        Public Shared Operator =(ByVal Object1 As DragInfo, ByVal Object2 As DragInfo) As Boolean
+        Public Shared Operator =(Object1 As DragInfo, Object2 As DragInfo) As Boolean
             Return Object1.Equals(Object2)
         End Operator
-        Public Shared Operator <>(ByVal Object1 As DragInfo, ByVal Object2 As DragInfo) As Boolean
+        Public Shared Operator <>(Object1 As DragInfo, Object2 As DragInfo) As Boolean
             Return Not Object1 = Object2
         End Operator
-        Public Overrides Function Equals(ByVal obj As Object) As Boolean
+        Public Overrides Function Equals(obj As Object) As Boolean
             If TypeOf obj Is DragInfo Then
                 Return CType(obj, DragInfo) = Me
             Else
@@ -280,9 +280,9 @@ Public Class TreeViewer
             End If
             DisposedValue = True
         End Sub
-        ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
+        ' TODO: override Finalize() only if Dispose( disposing As Boolean) above has code to free unmanaged resources.
         Protected Overrides Sub Finalize()
-            ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+            ' Do not change this code.  Put cleanup code in Dispose( disposing As Boolean) above.
             Dispose(False)
             MyBase.Finalize()
         End Sub
@@ -403,7 +403,7 @@ Public Class TreeViewer
         RequiresRepaint()
     End Sub
 
-    Protected Overrides Sub OnPaint(ByVal e As PaintEventArgs)
+    Protected Overrides Sub OnPaint(e As PaintEventArgs)
 
         If e IsNot Nothing Then
             With e.Graphics
@@ -600,50 +600,56 @@ Public Class TreeViewer
                     If ColumnHeaders.Any Then
                         ColumnHeaders.Draw.Clear()
                         Dim headers_LevelZero = ColumnHeaders(0)
-                        Dim headerX As Integer = -HScroll.Value
+                        Dim rollingLeft As Integer = -HScroll.Value
                         headers_LevelZero.ForEach(Sub(header)
                                                       With header
-                                                          Dim headerBounds As New Rectangle(headerX, 0, .Width, headers_LevelZero.Height)
-                                                          .Bounds_ = headerBounds
-                                                          If headerX + .Width > 0 And headerX < Width Then 'Within Left and Right side of screen
-                                                              ColumnHeaders.Draw.Add(header)
-                                                              Dim drawStyle As CellStyle = If(header Is Hit?.Column, .MouseStyle, .Style)
-                                                              If drawStyle.Theme = Theme.None Then
-                                                                  If drawStyle.BackImage Is Nothing Then
-                                                                      Using LinearBrush As New LinearGradientBrush(headerBounds, drawStyle.BackColor, drawStyle.ShadeColor, LinearGradientMode.Vertical)
-                                                                          e.Graphics.FillRectangle(LinearBrush, headerBounds)
-                                                                      End Using
-                                                                  Else
-                                                                      e.Graphics.DrawImage(drawStyle.BackImage, headerBounds)
-                                                                  End If
-                                                              Else
-                                                                  Dim currentTheme = If(header Is Hit?.Column, .MouseStyle.Theme, drawStyle.Theme)
-                                                                  e.Graphics.DrawImage(GlossyImages(currentTheme), headerBounds)
-                                                              End If
-                                                              Dim textBounds As Rectangle = headerBounds
-                                                              If Not .SortOrder = SortOrder.None Then
-                                                                  textBounds = New Rectangle(headerBounds.X, headerBounds.Y, headerBounds.Width - .SortIcon.Width, headerBounds.Height)
-                                                                  Dim sortRectangle As New Rectangle(textBounds.Right, textBounds.Y, .SortIcon.Width, textBounds.Height)
-                                                                  sortRectangle.Inflate(.SortIcon.Width - sortRectangle.Width, CInt((.SortIcon.Height - sortRectangle.Height) / 2))
-                                                                  sortRectangle.Offset(-3, 0)
-                                                                  e.Graphics.DrawImage(.SortIcon, sortRectangle)
-                                                              End If
-                                                              Using headerTextBrush As New SolidBrush(drawStyle.ForeColor)
-                                                                  e.Graphics.DrawString(
-                                                    .Text,
-                                                    drawStyle.Font,
-                                                    headerTextBrush,
-                                                    textBounds,
-                                                    drawStyle.Alignment
-                                                )
-                                                              End Using
-                                                              ControlPaint.DrawBorder3D(e.Graphics, headerBounds, Border3DStyle.Raised)
-                                                          End If
-                                                          headerX += .Width
+                                                          .Bounds_ = New Rectangle(rollingLeft, 0, .Width, headers_LevelZero.Height)
+                                                          If rollingLeft + .Width > 0 And rollingLeft < Width Then ColumnHeaders.Draw.Add(header)
+                                                          rollingLeft += .Width
                                                       End With
                                                   End Sub)
+                        Dim headsDraw As New List(Of ColumnHead)(ColumnHeaders.Draw)
+                        If FreezeRoot Then
+                            Dim headFirst As ColumnHead = headers_LevelZero.First
+                            headFirst.Bounds_ = New Rectangle(0, 0, headFirst.Width, headFirst.Bounds.Height)
+                            headsDraw.Add(headFirst)
+                        End If
+                        headsDraw.ForEach(Sub(header)
+                                              With header
+                                                  Dim drawStyle As CellStyle = If(header Is Hit?.Column, .MouseStyle, .Style)
+                                                  If drawStyle.Theme = Theme.None Then
+                                                      If drawStyle.BackImage Is Nothing Then
+                                                          Using LinearBrush As New LinearGradientBrush(.Bounds, drawStyle.BackColor, drawStyle.ShadeColor, LinearGradientMode.Vertical)
+                                                              e.Graphics.FillRectangle(LinearBrush, .Bounds)
+                                                          End Using
+                                                      Else
+                                                          e.Graphics.DrawImage(drawStyle.BackImage, .Bounds)
+                                                      End If
+                                                  Else
+                                                      Dim currentTheme = If(header Is Hit?.Column, .MouseStyle.Theme, drawStyle.Theme)
+                                                      e.Graphics.DrawImage(GlossyImages(currentTheme), .Bounds)
+                                                  End If
+                                                  Dim textBounds As Rectangle = .Bounds
+                                                  If Not .SortOrder = SortOrder.None Then
+                                                      textBounds = New Rectangle(.Bounds.X, .Bounds.Y, .Bounds.Width - .SortIcon.Width, .Bounds.Height)
+                                                      Dim sortRectangle As New Rectangle(textBounds.Right, textBounds.Y, .SortIcon.Width, textBounds.Height)
+                                                      sortRectangle.Inflate(.SortIcon.Width - sortRectangle.Width, CInt((.SortIcon.Height - sortRectangle.Height) / 2))
+                                                      sortRectangle.Offset(-3, 0)
+                                                      e.Graphics.DrawImage(.SortIcon, sortRectangle)
+                                                  End If
+                                                  Using headerTextBrush As New SolidBrush(drawStyle.ForeColor)
+                                                      e.Graphics.DrawString(
+                                                 .Text,
+                                                 drawStyle.Font,
+                                                 headerTextBrush,
+                                                 textBounds,
+                                                 drawStyle.Alignment
+                                             )
+                                                  End Using
+                                                  ControlPaint.DrawBorder3D(e.Graphics, .Bounds, Border3DStyle.Raised)
+                                              End With
+                                          End Sub)
                     End If
-
                 Else
                     HScroll.Hide()
                     VScroll.Hide()
@@ -1175,7 +1181,7 @@ Public Class TreeViewer
         Get
             Return _ExpanderStyle
         End Get
-        Set(ByVal value As ExpandStyle)
+        Set(value As ExpandStyle)
             _ExpanderStyle = value
             UpdateExpandImage()
         End Set
@@ -1185,7 +1191,7 @@ Public Class TreeViewer
         Get
             Return CheckboxStyle_
         End Get
-        Set(ByVal value As CheckStyle)
+        Set(value As CheckStyle)
             CheckboxStyle_ = value
             RefreshNodesBounds_Lines(Ancestors)
         End Set
@@ -1290,24 +1296,24 @@ Public Class TreeViewer
         End Set
     End Property
 #End Region
-    Public Event ColumnClicked(sender As Object, ByVal e As ColumnEventArgs)
-    Public Event NodesChanged(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeBeforeAdded(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeAfterAdded(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeBeforeRemoved(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeAfterRemoved(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeBeforeEdited(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeAfterEdited(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeDragStart(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeDragOver(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeDropped(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeChecked(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeExpanded(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeCollapsed(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeClicked(ByVal sender As Object, ByVal e As NodeEventArgs)
-    Public Event NodeRightClicked(ByVal sender As Object, ByVal e As NodeEventArgs)
+    Public Event ColumnClicked(sender As Object, e As ColumnEventArgs)
+    Public Event NodesChanged(sender As Object, e As NodeEventArgs)
+    Public Event NodeBeforeAdded(sender As Object, e As NodeEventArgs)
+    Public Event NodeAfterAdded(sender As Object, e As NodeEventArgs)
+    Public Event NodeBeforeRemoved(sender As Object, e As NodeEventArgs)
+    Public Event NodeAfterRemoved(sender As Object, e As NodeEventArgs)
+    Public Event NodeBeforeEdited(sender As Object, e As NodeEventArgs)
+    Public Event NodeAfterEdited(sender As Object, e As NodeEventArgs)
+    Public Event NodeDragStart(sender As Object, e As NodeEventArgs)
+    Public Event NodeDragOver(sender As Object, e As NodeEventArgs)
+    Public Event NodeDropped(sender As Object, e As NodeEventArgs)
+    Public Event NodeChecked(sender As Object, e As NodeEventArgs)
+    Public Event NodeExpanded(sender As Object, e As NodeEventArgs)
+    Public Event NodeCollapsed(sender As Object, e As NodeEventArgs)
+    Public Event NodeClicked(sender As Object, e As NodeEventArgs)
+    Public Event NodeRightClicked(sender As Object, e As NodeEventArgs)
     Public Event NodeFavorited(sender As Object, e As NodeEventArgs)
-    Public Event NodeDoubleClicked(ByVal sender As Object, ByVal e As NodeEventArgs)
+    Public Event NodeDoubleClicked(sender As Object, e As NodeEventArgs)
 
     Private Sub ColumnHeaders_Changed() Handles ColumnHeaders_.Changed
         If ColumnHeaders.Any Then RecursiveBuild(Ancestors, 0, Table)
@@ -1524,7 +1530,7 @@ Public Class TreeViewer
     End Sub
 
 #Region " KEYPRESS EVENTS "
-    Private Sub On_PreviewKeyDown(ByVal sender As Object, ByVal e As PreviewKeyDownEventArgs)
+    Private Sub On_PreviewKeyDown(sender As Object, e As PreviewKeyDownEventArgs)
 
         If e IsNot Nothing Then
             Select Case e.KeyCode
@@ -1601,7 +1607,7 @@ Public Class TreeViewer
         End With
 
     End Sub
-    Protected Overrides Sub OnDragLeave(ByVal e As EventArgs)
+    Protected Overrides Sub OnDragLeave(e As EventArgs)
 
         DragData.DropHighlightNode = Nothing
         Invalidate()
@@ -1624,14 +1630,14 @@ Public Class TreeViewer
         MyBase.OnDragLeave(e)
 
     End Sub
-    Protected Overrides Sub OnDragEnter(ByVal e As DragEventArgs)
+    Protected Overrides Sub OnDragEnter(e As DragEventArgs)
 
         ScrollTimer.Stop()
         Invalidate()
         MyBase.OnDragEnter(e)
 
     End Sub
-    Protected Overrides Sub OnDragOver(ByVal e As DragEventArgs)
+    Protected Overrides Sub OnDragOver(e As DragEventArgs)
 
         If e IsNot Nothing Then
             e.Effect = DragDropEffects.All
@@ -1656,7 +1662,7 @@ Public Class TreeViewer
         MyBase.OnDragOver(e)
 
     End Sub
-    Protected Overrides Sub OnDragDrop(ByVal e As DragEventArgs)
+    Protected Overrides Sub OnDragDrop(e As DragEventArgs)
 
         If e IsNot Nothing Then
             Dim DragNode As Node = TryCast(e.Data.GetData(GetType(Node)), Node)
@@ -1673,7 +1679,7 @@ Public Class TreeViewer
         End If
 
     End Sub
-    Protected Overrides Sub OnGiveFeedback(ByVal e As GiveFeedbackEventArgs)
+    Protected Overrides Sub OnGiveFeedback(e As GiveFeedbackEventArgs)
 
         If e IsNot Nothing Then
             e.UseDefaultCursors = False
@@ -1869,25 +1875,25 @@ Public Class TreeViewer
                       End Sub)
 
     End Sub
+    Private Const FreezeRoot As Boolean = True
     Private Sub Node_SetBounds(node As Node)
 
         Dim y As Integer = RollingHeight - VScroll.Value
         Dim HorizontalSpacing As Integer = 3
         With node
 #Region " S E T   B O U N D S "
-            Dim x As Integer = 0 - If(.IsRoot, HScroll.Value, 0)
+            Dim x As Integer = 0 '- If(.IsRoot And Not FreezeRoot, HScroll.Value, 0)
+            Dim leftMost As Integer = x + Offset.X + HorizontalSpacing + If(.Parent Is Nothing, If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right)
+
             If ExpandBeforeText Then
                 '■■■■■■■■■■■■■ P r e f e r
 #Region " +- Icon precedes Text "
                 'Bounds.X cascades from [1] Favorite, [2] Checkbox, [3] Image, [4] ShowHide, [5] Text
                 REM FAVORITE
-                Dim leftMost As Integer = Offset.X + HorizontalSpacing + If(.Parent Is Nothing, If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right)
-                'If .IsFieldParent Then leftMost = ColumnHeaders(.HeaderLevel)(0).Bounds.Right
-                ._Bounds_Favorite.X = x + leftMost
+                ._Bounds_Favorite.X = leftMost
                 ._Bounds_Favorite.Y = y + CInt((.Height - FavoriteImage.Height) / 2)
                 ._Bounds_Favorite.Width = If(.CanFavorite, FavoriteImage.Width, 0)
                 ._Bounds_Favorite.Height = If(.CanFavorite, FavoriteImage.Height, .Height)
-                'If .Text = "402630" And StopMe Then Stop
 
                 REM CHECKBOX
                 ._Bounds_Check.X = ._Bounds_Favorite.Right + If(._Bounds_Favorite.Width = 0, 0, HorizontalSpacing)
@@ -1925,7 +1931,7 @@ Public Class TreeViewer
             Else
 #Region " +- Icon follows Text "
                 REM EXPAND/COLLAPSE
-                ._Bounds_ShowHide.X = x + Offset.X + HorizontalSpacing + If(IsNothing(.Parent), If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right + HorizontalSpacing)
+                ._Bounds_ShowHide.X = leftMost
                 ._Bounds_ShowHide.Y = y + CInt((.Height - ExpandHeight) / 2)
                 ._Bounds_ShowHide.Width = If(.HasChildren, ExpandHeight, 0)
                 ._Bounds_ShowHide.Height = ExpandHeight
@@ -1965,7 +1971,7 @@ Public Class TreeViewer
     End Sub
 
     '//////////////////////////////////// SCROLLING, SCROLLING, SCROLLING
-    Private Sub OnScrolled(ByVal sender As Object, e As ScrollEventArgs) Handles HScroll.Scroll, VScroll.Scroll
+    Private Sub OnScrolled(sender As Object, e As ScrollEventArgs) Handles HScroll.Scroll, VScroll.Scroll
 
         If e.ScrollOrientation = ScrollOrientation.HorizontalScroll Then
             HScrollLeftRight(e.OldValue - e.NewValue)
@@ -1981,11 +1987,13 @@ Public Class TreeViewer
 
         If X_Change = 0 Then Exit Sub
         Ancestors.Visible.ForEach(Sub(node)
-                                      node._Bounds_ShowHide.X += X_Change
-                                      node._Bounds_Favorite.X += X_Change
-                                      node._Bounds_Check.X += X_Change
-                                      node._Bounds_Image.X += X_Change
-                                      node._Bounds.X += X_Change
+                                      If Not (node.Parent Is Nothing And FreezeRoot) Then
+                                          node._Bounds_ShowHide.X += X_Change
+                                          node._Bounds_Favorite.X += X_Change
+                                          node._Bounds_Check.X += X_Change
+                                          node._Bounds_Image.X += X_Change
+                                          node._Bounds.X += X_Change
+                                      End If
                                   End Sub)
         Invalidate()
 
@@ -2113,7 +2121,7 @@ Public Class TreeViewer
         End If
 
     End Sub
-    Private Sub ExpandCollapseNodes(ByVal Nodes As NodeCollection, State As Boolean)
+    Private Sub ExpandCollapseNodes(Nodes As NodeCollection, State As Boolean)
 
         For Each Node As Node In Nodes
             If State Then
@@ -2231,7 +2239,7 @@ Public NotInheritable Class NodeCollection
         End Get
     End Property
 
-    Public Overloads Function Contains(ByVal Name As String) As Boolean
+    Public Overloads Function Contains(Name As String) As Boolean
 
         If Count = 0 Then
             Return False
@@ -2271,7 +2279,7 @@ Public NotInheritable Class NodeCollection
     Public Overloads Function Add(Text As String) As Node
         Return Add(New Node With {.Text = Text})
     End Function
-    Public Overloads Function Add(ByVal AddNode As Node) As Node
+    Public Overloads Function Add(AddNode As Node) As Node
 
         If AddNode IsNot Nothing Then
             With AddNode
@@ -2311,7 +2319,7 @@ Public NotInheritable Class NodeCollection
         Return AddNode
 
     End Function
-    Public Overloads Function AddRange(ByVal Nodes As List(Of Node)) As List(Of Node)
+    Public Overloads Function AddRange(Nodes As List(Of Node)) As List(Of Node)
 
         If Nodes IsNot Nothing Then
             For Each Node As Node In Nodes
@@ -2322,7 +2330,7 @@ Public NotInheritable Class NodeCollection
         Return Nodes
 
     End Function
-    Public Overloads Function AddRange(ByVal Nodes As Node()) As Node()
+    Public Overloads Function AddRange(Nodes As Node()) As Node()
 
         If Nodes IsNot Nothing Then
             For Each Node As Node In Nodes
@@ -2333,7 +2341,7 @@ Public NotInheritable Class NodeCollection
         Return Nodes
 
     End Function
-    Public Overloads Function AddRange(ByVal Nodes As String()) As Node()
+    Public Overloads Function AddRange(Nodes As String()) As Node()
 
         Dim NewNodes As New List(Of Node)
         If Nodes IsNot Nothing Then
@@ -2346,7 +2354,7 @@ Public NotInheritable Class NodeCollection
         Return NewNodes.ToArray
 
     End Function
-    Public Overloads Function Clear(ByVal Nodes As NodeCollection) As NodeCollection
+    Public Overloads Function Clear(Nodes As NodeCollection) As NodeCollection
 
         Clear()
         Tree?.RequiresRepaint()
@@ -2373,7 +2381,7 @@ Public NotInheritable Class NodeCollection
         Return InsertNode
 
     End Function
-    Public Overloads Function Remove(ByVal RemoveNode As Node) As Node
+    Public Overloads Function Remove(RemoveNode As Node) As Node
 
         If RemoveNode IsNot Nothing Then
             MyBase.Remove(RemoveNode)
@@ -2382,13 +2390,13 @@ Public NotInheritable Class NodeCollection
         Return RemoveNode
 
     End Function
-    Public Shadows Function Item(ByVal Name As String) As Node
+    Public Shadows Function Item(Name As String) As Node
 
         Dim Nodes As New List(Of Node)((From N In Me Where N.Name = Name).ToArray)
         Return If(Nodes.Any, Nodes.First, Nothing)
 
     End Function
-    Public Shadows Function ItemByTag(ByVal TagObject As Object) As Node
+    Public Shadows Function ItemByTag(TagObject As Object) As Node
 
         Dim Nodes As New List(Of Node)((From N In All Where N.Tag Is TagObject).ToArray)
         Return If(Nodes.Any, Nodes.First, Nothing)
@@ -3165,9 +3173,9 @@ Public Class Node
         End If
         DisposedValue = True
     End Sub
-    ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
+    ' TODO: override Finalize() only if Dispose( disposing As Boolean) above has code to free unmanaged resources.
     Protected Overrides Sub Finalize()
-        ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+        ' Do not change this code.  Put cleanup code in Dispose( disposing As Boolean) above.
         Dispose(False)
         MyBase.Finalize()
     End Sub
@@ -3452,13 +3460,13 @@ Public Class ColumnHeadCollection
         Return Headers.ToArray
 
     End Function
-    Public Shadows Function Add(ByVal Text As String) As ColumnHead
+    Public Shadows Function Add(Text As String) As ColumnHead
 
         Dim addHeader As New ColumnHead(Text)
         Return Add(addHeader)
 
     End Function
-    Public Shadows Function Add(ByVal Text As String, ByVal Width As Integer) As ColumnHead
+    Public Shadows Function Add(Text As String, Width As Integer) As ColumnHead
 
         Dim Header As New ColumnHead(Text) With {
             .Text = Text,
@@ -3490,13 +3498,13 @@ Public Class ColumnHeadCollection
         Return If(names.Any, names.First, Nothing)
 
     End Function
-    Public Shadows Sub Insert(ByVal index As Integer, ByVal insertHeader As ColumnHead)
+    Public Shadows Sub Insert(index As Integer, insertHeader As ColumnHead)
 
         MyBase.Insert(index, insertHeader)
         RaiseEvent Changed()
 
     End Sub
-    Public Shadows Sub Remove(ByVal removeHeader As ColumnHead)
+    Public Shadows Sub Remove(removeHeader As ColumnHead)
 
         MyBase.Remove(removeHeader)
         RaiseEvent Changed()
@@ -3517,9 +3525,9 @@ Public Class ColumnHeadCollection
         End If
         DisposedValue = True
     End Sub
-    ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
+    ' TODO: override Finalize() only if Dispose( disposing As Boolean) above has code to free unmanaged resources.
     Protected Overrides Sub Finalize()
-        ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+        ' Do not change this code.  Put cleanup code in Dispose( disposing As Boolean) above.
         Dispose(False)
         MyBase.Finalize()
     End Sub
@@ -3626,7 +3634,7 @@ End Class
         Get
             Return Text_
         End Get
-        Set(ByVal value As String)
+        Set(value As String)
             If Text_ <> value Then
                 Text_ = value
                 TextWidth_Set()
@@ -3648,7 +3656,7 @@ End Class
         Get
             Return {_TextWidth, ContentWidth}.Max + If(SortOrder = SortOrder.None, 0, SortIcon.Width)
         End Get
-        'Set(ByVal Value As Integer)
+        'Set( Value As Integer)
         '    If Width_ <> Value Then
         '        Width_ = Value
         '        ContentWidth_ = Value
@@ -3661,7 +3669,7 @@ End Class
         Get
             Return Image_
         End Get
-        Set(ByVal Value As Image)
+        Set(Value As Image)
             If Not SameImage(Image_, Value) Then
                 Image_ = Value
                 RaiseEvent Changed(Me, Nothing)
@@ -3694,7 +3702,7 @@ End Class
 #Region "IDisposable Support"
     Private DisposedValue As Boolean ' To detect redundant calls IDisposable
     Protected Overridable Sub Dispose(disposing As Boolean)
-        If Not disposedValue Then
+        If Not DisposedValue Then
             If disposing Then
                 ' TODO: dispose managed state (managed objects).
                 Font_.Dispose()
@@ -3704,11 +3712,11 @@ End Class
             ' TODO: free unmanaged resources (unmanaged objects) and override Finalize() below.
             ' TODO: set large fields to null.
         End If
-        disposedValue = True
+        DisposedValue = True
     End Sub
-    ' TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
+    ' TODO: override Finalize() only if Dispose( disposing As Boolean) above has code to free unmanaged resources.
     Protected Overrides Sub Finalize()
-        ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
+        ' Do not change this code.  Put cleanup code in Dispose( disposing As Boolean) above.
         Dispose(False)
         MyBase.Finalize()
     End Sub

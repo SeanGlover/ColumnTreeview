@@ -407,6 +407,7 @@ Public Class TreeViewer
 
         If e IsNot Nothing Then
             With e.Graphics
+                .TextRenderingHint = Drawing.Text.TextRenderingHint.AntiAlias
                 .FillRectangle(New SolidBrush(BackColor), ClientRectangle)
                 If BackgroundImage IsNot Nothing Then
                     Dim xOffset As Integer = {ClientRectangle.Width, Math.Abs(Convert.ToInt32((ClientRectangle.Width - BackgroundImage.Width) / 2))}.Min
@@ -1875,14 +1876,14 @@ Public Class TreeViewer
                       End Sub)
 
     End Sub
-    Private Const FreezeRoot As Boolean = True
+    Private Const FreezeRoot As Boolean = False
     Private Sub Node_SetBounds(node As Node)
 
         Dim y As Integer = RollingHeight - VScroll.Value
         Dim HorizontalSpacing As Integer = 3
         With node
 #Region " S E T   B O U N D S "
-            Dim x As Integer = 0 '- If(.IsRoot And Not FreezeRoot, HScroll.Value, 0)
+            Dim x As Integer = 0 - If(.IsRoot And Not FreezeRoot, HScroll.Value, 0)
             Dim leftMost As Integer = x + Offset.X + HorizontalSpacing + If(.Parent Is Nothing, If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right)
 
             If ExpandBeforeText Then

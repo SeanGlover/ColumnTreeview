@@ -212,6 +212,7 @@ Public Class TreeViewer
     Private WithEvents IC_NodeEdit As New ImageCombo With {.Dock = DockStyle.Fill,
         .Margin = New Padding(0)}
 #End Region
+
     Private IgnoreSizeChanged As Boolean = False
     '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ C O N S T A N T S
     Private Const CheckHeight As Integer = 14
@@ -699,6 +700,7 @@ Public Class TreeViewer
     End Sub
 #End Region
 
+    Public Property FreezeRoot As Boolean = False
     Private ExpandBeforeText_ As Boolean = True
     Public Property ExpandBeforeText As Boolean
         Get
@@ -736,8 +738,6 @@ Public Class TreeViewer
         RequiresRepaint()
 
     End Sub
-
-    Private Const FreezeRoot As Boolean = False
     Private WithEvents ColumnHeaders_ As New HeaderLevels(Me)
     Public ReadOnly Property ColumnHeaders As HeaderLevels
         Get
@@ -765,6 +765,8 @@ Public Class TreeViewer
         End Get
         Set(value As Object)
             If value IsNot _DataSource Then
+                HScroll.Value = 0
+                VScroll.Value = 0
                 Dim startLoad As Date = Now
                 Table_ = New DataTable
                 _DataSource = value
@@ -850,6 +852,7 @@ Public Class TreeViewer
                     .HeaderLevel_ = lvl
                     .IsHeader_ = True
                     .ColumnIndex_ = 0
+                    .Header_ = headers(.ColumnIndex)
                     .Font = Font
                     .Row_ = firstRow
                     .Value = firstRow(headName)
@@ -865,6 +868,7 @@ Public Class TreeViewer
                                                      .HeaderLevel_ = lvl
                                                      .IsFieldParent_ = True
                                                      .ColumnIndex_ = 1
+                                                     .Header_ = headers(.ColumnIndex)
                                                      .DataType_ = GetType(String)
                                                      .IsField_ = False
                                                      .Font = Font
@@ -878,6 +882,7 @@ Public Class TreeViewer
                                                                         With fieldNode
                                                                             .HeaderLevel_ = lvl
                                                                             .ColumnIndex_ = columnIndex
+                                                                            .Header_ = headers(.ColumnIndex)
                                                                             .IsField_ = True
                                                                             .Font = Font
                                                                             .Value = row(column.Text)
@@ -1451,70 +1456,7 @@ Public Class TreeViewer
                     Dim Bounds_Image As New Rectangle(xOffset, yOffset, {ClientRectangle.Width, BackgroundImage.Width}.Min, {ClientRectangle.Height, BackgroundImage.Height}.Min)
                     .DrawImage(BackgroundImage, Bounds_Image)
                 End If
-                ColumnHeaders.Draw.Clear()
-                ColumnHeaders.ForEach(Sub(headers)
-                                          Dim rollingLeft As Integer = -HScroll.Value
-                                          headers.ForEach(Sub(header)
-                                                              With header
-                                                                  .Bounds_Image = If(.Image Is Nothing,
-                                                                  New Rectangle(rollingLeft, 0, 0, headers.Height),
-                                                                  New Rectangle(rollingLeft, CInt((headers.Height - .Image.Height) / 2), 2 + .Image.Width + 1, .Image.Height))
-                                                                  Dim widthProposed As Integer = .Bounds_Image.Width
-                                                                  If .SortIcon Is Nothing Then
-                                                                      widthProposed += { .ContentWidth, .TextSize.Width}.Max
-                                                                      .Bounds_Sort = New Rectangle(rollingLeft + widthProposed, 0, 0, 0)
-                                                                  Else
-                                                                      widthProposed += If(.ContentWidth - .TextSize.Width > .SortIcon.Width, .ContentWidth, .TextSize.Width + 2 + .SortIcon.Width + 2)
-                                                                      .Bounds_Sort = New Rectangle(rollingLeft + widthProposed - .SortIcon.Width, CInt((headers.Height - .SortIcon.Height) / 2), .SortIcon.Width, .SortIcon.Height)
-                                                                  End If
-                                                                  .Bounds_Text = New Rectangle(.Bounds_Image.Right, 0, .Bounds_Sort.Left - .Bounds_Image.Right, headers.Height)
-                                                                  .Bounds = New Rectangle(rollingLeft, 0, widthProposed, headers.Height)
-                                                                  If .Bounds.Right > 0 And rollingLeft < Width Then
-                                                                      ColumnHeaders.Draw.Add(header)
-                                                                      Dim drawStyle As CellStyle = If(header Is Hit?.Column, .MouseStyle, .Style)
-                                                                      If drawStyle.Theme = Theme.None Then
-                                                                          If drawStyle.BackImage Is Nothing Then
-                                                                              Using LinearBrush As New LinearGradientBrush(.Bounds, drawStyle.BackColor, drawStyle.ShadeColor, LinearGradientMode.Vertical)
-                                                                                  e.Graphics.FillRectangle(LinearBrush, .Bounds)
-                                                                              End Using
-                                                                          Else
-                                                                              e.Graphics.DrawImage(drawStyle.BackImage, .Bounds)
-                                                                          End If
-                                                                      Else
-                                                                          Dim currentTheme = If(header Is Hit?.Column, .MouseStyle.Theme, drawStyle.Theme)
-                                                                          e.Graphics.DrawImage(GlossyImages(currentTheme), .Bounds)
-                                                                      End If
-                                                                      If .Image IsNot Nothing Then
-                                                                          Dim boundsImage As Rectangle = .Bounds_Image
-                                                                          boundsImage.Inflate(-3, 0)
-                                                                          boundsImage.Offset(2, 0)
-                                                                          e.Graphics.DrawImage(.Image, boundsImage)
-                                                                      End If
-                                                                      If .SortIcon IsNot Nothing Then
-                                                                          Dim boundsSort As Rectangle = .Bounds_Sort
-                                                                          boundsSort.Inflate(-4, 0)
-                                                                          boundsSort.Offset(-4, 0)
-                                                                          e.Graphics.DrawImage(.SortIcon, boundsSort)
-                                                                      End If
-                                                                      Using headerTextBrush As New SolidBrush(drawStyle.ForeColor)
-                                                                          e.Graphics.DrawString(
-                                                                         .Text,
-                                                                         drawStyle.Font,
-                                                                         headerTextBrush,
-                                                                         .Bounds_Text,
-                                                                         drawStyle.Alignment
-                                                                     )
-                                                                      End Using
-                                                                      ControlPaint.DrawBorder3D(e.Graphics, .Bounds, Border3DStyle.Raised)
-                                                                  End If
-                                                                  rollingLeft += .Bounds.Width
-                                                              End With
-                                                          End Sub)
-                                          If FreezeRoot Then
-                                              Dim headFirst As ColumnHead = headers.First
-                                              ColumnHeaders.Draw.Add(headFirst)
-                                          End If
-                                      End Sub)
+                Columns_SetBounds()
                 If Ancestors.Any Then
                     Dim drawRootLines As Boolean = RootLines And Ancestors.Count > 1 'Doesn't make sense if only one root, when User wants RootLines
                     Dim firstRootNode As Node = Ancestors.First
@@ -1543,33 +1485,7 @@ Public Class TreeViewer
                                 End If
                                 If .HasChildren Then e.Graphics.DrawImage(If(.Expanded, CollapseImage, ExpandImage), .Bounds_ShowHide)
                                 If .CanFavorite Then e.Graphics.DrawImage(If(.Favorite, My.Resources.star, My.Resources.starEmpty), .Bounds_Favorite)
-                                If .CheckBox Then
-                                    If CheckboxStyle = CheckStyle.Check Then
-                                        '/// Check background as White or Gray
-                                        Using checkBrush As New SolidBrush(If(.PartialChecked, Color.FromArgb(192, Color.LightGray), Color.White))
-                                            e.Graphics.FillRectangle(checkBrush, .Bounds_Check)
-                                        End Using
-                                        ''/// Draw the checkmark ( only if .Checked or .PartialChecked )
-                                        If .Checked Or .PartialChecked Then
-                                            Using CheckFont As New Font("Marlett", 10)
-                                                TextRenderer.DrawText(e.Graphics, "a".ToString(InvariantCulture), CheckFont, .Bounds_Check, If(.Checked, Color.Blue, Color.DarkGray), TextFormatFlags.NoPadding Or TextFormatFlags.HorizontalCenter Or TextFormatFlags.Bottom)
-                                            End Using
-                                        End If
-                                        '/// Draw the surrounding Check square
-                                        Using Pen As New Pen(Color.Blue, 1)
-                                            e.Graphics.DrawRectangle(Pen, .Bounds_Check)
-                                        End Using
 
-                                    ElseIf CheckboxStyle = CheckStyle.Slide Then
-                                        e.Graphics.DrawImage(If(.Checked, My.Resources.slideStateOn, If(.PartialChecked, My.Resources.slideStateMixed, My.Resources.slideStateOff)), .Bounds_Check)
-                                        If Hit?.Node Is Node And Hit?.Region = MouseRegion.CheckBox Then
-                                            Using checkBrush As New SolidBrush(Color.FromArgb(96, MouseOverColor))
-                                                e.Graphics.FillRectangle(checkBrush, .Bounds_Check)
-                                            End Using
-                                        End If
-
-                                    End If
-                                End If
                                 If .TipText IsNot Nothing Then
                                     Dim triangleHeight As Single = 8
                                     Dim trianglePoints As New List(Of PointF) From {
@@ -1588,7 +1504,7 @@ Public Class TreeViewer
                                         End Using
                                     End If
                                 End If
-                                Dim boundsColumn As Rectangle = ColumnHeaders(.HeaderLevel)(.ColumnIndex).Bounds
+                                Dim boundsColumn As Rectangle = .Header.Bounds
                                 Dim boundsNode As Rectangle = If(Node.HasChildren,
                                     .Bounds_Text, New Rectangle(boundsColumn.Left,
                                     .Bounds_Text.Top, boundsColumn.Width, .Bounds_Text.Height))
@@ -1609,57 +1525,18 @@ Public Class TreeViewer
                                         e.Graphics.FillRectangle(SemiTransparentBrush, boundsNode)
                                     End Using
                                 End If
-                                If .Selected Then
-                                    Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is Node, DropHighlightColor, .BackColor))
-                                        boundsNode.Inflate(-1, -1)
-                                        e.Graphics.FillRectangle(Brush, boundsNode)
-                                    End Using
-                                    Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, SelectionColor))
-                                        e.Graphics.FillRectangle(SemiTransparentBrush, boundsNode)
-                                        boundsNode.Inflate(1, 1)
-                                    End Using
-                                    e.Graphics.DrawRectangle(Pens.Black, boundsNode)
-                                End If
-
-                                Dim objectBounds As Rectangle = .Bounds_ShowHide
-                                Dim objectCenter As Integer = CInt(objectBounds.Height / 2)
-
-                                '/// Vertical line between this node and child nodes
-                                If .HasChildren And .Expanded Then
-                                    Dim childLast_bounds As Rectangle = Node_LeftMostBounds(.Children.Last)
-                                    Dim verticalNodeLineTop_xy As New Point(objectBounds.Left + objectCenter, objectBounds.Bottom)
-                                    Dim verticalNodeLineBottom_xy As New Point(objectBounds.Left + objectCenter, {childLast_bounds.Top + objectCenter, ClientRectangle.Height}.Min)
-                                    e.Graphics.DrawLine(linePen, verticalNodeLineTop_xy, verticalNodeLineBottom_xy)
-                                End If
-                                Dim horizontalNodeLine_x As Integer = {
-                                                .Bounds_Check.Left,
-                                                .Bounds_Favorite.Left,
-                                                .Bounds_ShowHide.Left
-                                                                              }.Min
-
-                                Dim VerticalCenter As Integer = objectBounds.Top + objectCenter
-
-                                If IsNothing(.Parent) Then
-                                    If drawRootLines Then e.Graphics.DrawLine(linePen, New Point(verticalRootLine_x, VerticalCenter), New Point(horizontalNodeLine_x, VerticalCenter))
-                                Else
-                                    REM /// HORIZONTAL LINES LEFT OF EXPAND/COLLAPSE
-                                    Dim NodeHorizontalLeftPoint As New Point(.Parent.Bounds_ShowHide.Left + objectCenter + 1, VerticalCenter)
-                                    Dim NodeHorizontalRightPoint As New Point(horizontalNodeLine_x, VerticalCenter)
-                                    e.Graphics.DrawLine(linePen, NodeHorizontalLeftPoint, NodeHorizontalRightPoint)
-                                End If
-
                                 If Not .HeaderLevel = 255 Then
                                     '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ H E A D   N O D E
                                     Using dottedPen As New Pen(Brushes.Silver, 1) With {
                                             .DashStyle = DashStyle.Dot
                                         }
-                                        boundsColumn = ColumnHeaders(.HeaderLevel)(.ColumnIndex).Bounds
+                                        boundsColumn = .Header.Bounds
                                         Dim boundsNodeHead As New Rectangle(boundsColumn.Left, .Bounds_Text.Top, boundsColumn.Width - 1, .Bounds_Text.Height)
                                         e.Graphics.DrawRectangle(dottedPen, boundsNodeHead)
                                         '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ F I E L D   N O D E S
                                         For Each fieldNode In .Fields
                                             With fieldNode
-                                                boundsColumn = ColumnHeaders(.HeaderLevel)(.ColumnIndex).Bounds
+                                                boundsColumn = .Header.Bounds
                                                 ._Bounds_Text = New Rectangle(boundsColumn.Left, Node.Bounds_Text.Top, boundsColumn.Width - 1, Node.Bounds_Text.Height)
                                                 If .Bounds_Text.Right > 0 And .Bounds_Text.Left < Width Then
                                                     Using textBrush As New SolidBrush(.ForeColor)
@@ -1693,6 +1570,92 @@ Public Class TreeViewer
                                         Next
                                     End Using
                                 End If
+                                If .Selected Then
+                                    Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is Node, DropHighlightColor, .BackColor))
+                                        boundsNode.Inflate(-1, -1)
+                                        e.Graphics.FillRectangle(Brush, boundsNode)
+                                    End Using
+                                    Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, SelectionColor))
+                                        e.Graphics.FillRectangle(SemiTransparentBrush, boundsNode)
+                                        boundsNode.Inflate(1, 1)
+                                    End Using
+                                    e.Graphics.DrawRectangle(Pens.Black, boundsNode)
+                                End If
+                                If .CheckBox Then
+                                    If FreezeRoot Then
+                                        Dim boundsCheck As Rectangle = .Bounds_Check
+                                        boundsCheck.Inflate(3, 3)
+                                        e.Graphics.FillEllipse(Brushes.Gainsboro, boundsCheck)
+                                    End If
+                                    If CheckboxStyle = CheckStyle.Check Then
+                                        '/// Check background as White or Gray
+                                        Using checkBrush As New SolidBrush(If(.PartialChecked, Color.FromArgb(192, Color.LightGray), Color.White))
+                                            e.Graphics.FillRectangle(checkBrush, .Bounds_Check)
+                                        End Using
+                                        ''/// Draw the checkmark ( only if .Checked or .PartialChecked )
+                                        If .Checked Or .PartialChecked Then
+                                            Using CheckFont As New Font("Marlett", 10)
+                                                TextRenderer.DrawText(e.Graphics, "a".ToString(InvariantCulture), CheckFont, .Bounds_Check, If(.Checked, Color.Blue, Color.DarkGray), TextFormatFlags.NoPadding Or TextFormatFlags.HorizontalCenter Or TextFormatFlags.Bottom)
+                                            End Using
+                                        End If
+                                        '/// Draw the surrounding Check square
+                                        Using Pen As New Pen(Color.Blue, 1)
+                                            e.Graphics.DrawRectangle(Pen, .Bounds_Check)
+                                        End Using
+
+                                    ElseIf CheckboxStyle = CheckStyle.Slide Then
+                                        e.Graphics.DrawImage(If(.Checked, My.Resources.slideStateOn, If(.PartialChecked, My.Resources.slideStateMixed, My.Resources.slideStateOff)), .Bounds_Check)
+                                        If Hit?.Node Is Node And Hit?.Region = MouseRegion.CheckBox Then
+                                            Using checkBrush As New SolidBrush(Color.FromArgb(96, MouseOverColor))
+                                                e.Graphics.FillRectangle(checkBrush, .Bounds_Check)
+                                            End Using
+                                        End If
+
+                                    End If
+                                End If
+                                Dim objectBounds As Rectangle = .Bounds_ShowHide
+                                Dim objectCenter As Integer = CInt(objectBounds.Height / 2)
+
+                                '/// Vertical line between this node and child nodes
+                                If .HasChildren And .Expanded Then
+                                    Dim childLast_bounds As Rectangle = Node_LeftMostBounds(.Children.Last)
+                                    Dim verticalNodeLineTop_xy As New Point(objectBounds.Left + objectCenter, objectBounds.Bottom)
+                                    Dim verticalNodeLineBottom_xy As New Point(objectBounds.Left + objectCenter, {childLast_bounds.Top + objectCenter, ClientRectangle.Height}.Min)
+                                    If FreezeRoot Then
+                                        e.Graphics.FillRectangle(Brushes.Gainsboro,
+                                                                 New Rectangle(verticalNodeLineTop_xy.X - 4,
+                                                                               verticalNodeLineTop_xy.Y,
+                                                                               8,
+                                                                               verticalNodeLineBottom_xy.Y - verticalNodeLineTop_xy.Y)
+                                                                               )
+                                    End If
+                                    e.Graphics.DrawLine(linePen, verticalNodeLineTop_xy, verticalNodeLineBottom_xy)
+                                End If
+
+                                Dim horizontalNodeLine_x As Integer = {
+                                                .Bounds_Check.Left,
+                                                .Bounds_Favorite.Left,
+                                                .Bounds_ShowHide.Left
+                                                                              }.Min
+                                Dim VerticalCenter As Integer = objectBounds.Top + objectCenter
+
+                                If IsNothing(.Parent) Then
+                                    If drawRootLines Then e.Graphics.DrawLine(linePen, New Point(verticalRootLine_x, VerticalCenter), New Point(horizontalNodeLine_x, VerticalCenter))
+                                Else
+                                    REM /// HORIZONTAL LINES LEFT OF EXPAND/COLLAPSE
+                                    Dim NodeHorizontalLeftPoint As New Point(.Parent.Bounds_ShowHide.Left + objectCenter + 1, VerticalCenter)
+                                    Dim NodeHorizontalRightPoint As New Point(horizontalNodeLine_x, VerticalCenter)
+                                    If FreezeRoot Then
+                                        e.Graphics.FillRectangle(Brushes.Gainsboro,
+                                                                 New Rectangle(NodeHorizontalLeftPoint.X,
+                                                                               NodeHorizontalLeftPoint.Y - 4,
+                                                                               NodeHorizontalRightPoint.X - NodeHorizontalLeftPoint.X,
+                                                                               8)
+                                                                               )
+                                    End If
+                                    e.Graphics.DrawLine(linePen, NodeHorizontalLeftPoint, NodeHorizontalRightPoint)
+                                End If
+
                             End With
                         Next
                         '/// Vertical root line between top ( first ) node and bottom ( last ) node ... but don't draw if the top IS the bottom too ( 1 node only )
@@ -1709,6 +1672,45 @@ Public Class TreeViewer
                     HScroll.Hide()
                     VScroll.Hide()
                 End If
+                ColumnHeaders.Draw.ForEach(Sub(header)
+                                               With header
+                                                   Dim drawStyle As CellStyle = If(header Is Hit?.Column, .MouseStyle, .Style)
+                                                   If drawStyle.Theme = Theme.None Then
+                                                       If drawStyle.BackImage Is Nothing Then
+                                                           Using LinearBrush As New LinearGradientBrush(.Bounds, drawStyle.BackColor, drawStyle.ShadeColor, LinearGradientMode.Vertical)
+                                                               e.Graphics.FillRectangle(LinearBrush, .Bounds)
+                                                           End Using
+                                                       Else
+                                                           e.Graphics.DrawImage(drawStyle.BackImage, .Bounds)
+                                                       End If
+                                                   Else
+                                                       Dim currentTheme = If(header Is Hit?.Column, .MouseStyle.Theme, drawStyle.Theme)
+                                                       e.Graphics.DrawImage(GlossyImages(currentTheme), .Bounds)
+                                                   End If
+                                                   If .Image IsNot Nothing Then
+                                                       Dim boundsImage As Rectangle = .Bounds_Image
+                                                       boundsImage.Inflate(-3, 0)
+                                                       boundsImage.Offset(2, 0)
+                                                       e.Graphics.DrawImage(.Image, boundsImage)
+                                                   End If
+                                                   If .SortIcon IsNot Nothing Then
+                                                       Dim boundsSort As Rectangle = .Bounds_Sort
+                                                       boundsSort.Inflate(-4, 0)
+                                                       boundsSort.Offset(-4, 0)
+                                                       e.Graphics.DrawImage(.SortIcon, boundsSort)
+                                                   End If
+                                                   Using headerTextBrush As New SolidBrush(drawStyle.ForeColor)
+                                                       e.Graphics.DrawString(
+                                                      .Text,
+                                                      drawStyle.Font,
+                                                      headerTextBrush,
+                                                      .Bounds_Text,
+                                                      drawStyle.Alignment
+                                                  )
+                                                   End Using
+                                                   ControlPaint.DrawBorder3D(e.Graphics, .Bounds, Border3DStyle.Raised)
+                                               End With
+                                           End Sub)
             End With
             ControlPaint.DrawBorder3D(e.Graphics, ClientRectangle, Border3DStyle.Sunken)
         End If
@@ -1751,65 +1753,40 @@ Public Class TreeViewer
 
         REM /// ITERATE ALL NODES CHANGING BOUNDS
         RefreshNodesBounds_Lines(Ancestors)
-
-        ColumnHeaders.Draw.Clear()
-        ColumnHeaders.ForEach(Sub(headers)
-                                  Dim rollingLeft As Integer = -HScroll.Value
-                                  headers.ForEach(Sub(header)
-                                                      With header
-                                                          .Bounds_Image = If(.Image Is Nothing,
-                                                                  New Rectangle(rollingLeft, 0, 0, headers.Height),
-                                                                  New Rectangle(rollingLeft, CInt((headers.Height - .Image.Height) / 2), .Image.Width, headers.Height))
-                                                          Dim widthProposed As Integer = .Bounds_Image.Width
-                                                          If .SortIcon Is Nothing Then
-                                                              widthProposed += { .ContentWidth, .TextSize.Width}.Max
-                                                              .Bounds_Sort = New Rectangle(rollingLeft + widthProposed, 0, 0, 0)
-                                                          Else
-                                                              widthProposed += If(.ContentWidth - .TextSize.Width > .SortIcon.Width, .ContentWidth, .TextSize.Width + .SortIcon.Width)
-                                                              .Bounds_Sort = New Rectangle(rollingLeft + widthProposed - (.SortIcon.Width + 5), CInt((headers.Height - .SortIcon.Height) / 2), .SortIcon.Width, .SortIcon.Height)
-                                                          End If
-                                                          .Bounds_Text = New Rectangle(.Bounds_Image.Right, 0, .Bounds_Sort.Left - .Bounds_Image.Right, headers.Height)
-                                                          .Bounds = New Rectangle(rollingLeft, 0, widthProposed, headers.Height)
-                                                          If .Bounds.Right > 0 And rollingLeft < Width Then
-                                                              ColumnHeaders.Draw.Add(header)
-                                                          End If
-                                                          rollingLeft += .Bounds.Width
-                                                      End With
-                                                  End Sub)
-                              End Sub)
+        Columns_SetBounds() 'Must be done here to ensure initial view of H/V Scrolls is accurate
 
         REM /// TOTAL SIZE + RESIZE THE CONTROL IF AUTOSIZE
 #Region " DETERMINE THE MAXIMUM POSSIBLE SIZE OF THE CONTROL AND COMPARE TO THE UNRESTRICTED SIZE "
         Dim screenLocation As Point = PointToScreen(New Point(0, 0))
-                                  Dim wa As Size = WorkingArea.Size
-                                  Dim maxScreenSize As New Size(wa.Width - screenLocation.X, wa.Height - screenLocation.Y)
-                                  Dim maxParentSize As New Size
-                                  Dim maxUserSize As Size = MaximumSize
-                                  Dim unboundedSize As Size = UnRestrictedSize 'This is strictly the space size required to fit all node text ( does NOT include ScrollBars )
+        Dim wa As Size = WorkingArea.Size
+        Dim maxScreenSize As New Size(wa.Width - screenLocation.X, wa.Height - screenLocation.Y)
+        Dim maxParentSize As New Size
+        Dim maxUserSize As Size = MaximumSize
+        Dim unboundedSize As Size = UnRestrictedSize 'This is strictly the space size required to fit all node text ( does NOT include ScrollBars )
 #Region " DETERMINE IF A PARENT RESTRICTS THE SIZE OF THE TREEVIEWER - LOOK FOR <.AutoSize> IN PARENT CONTROL PROPERTIES "
-                                  If Parent IsNot Nothing Then
-                                      Dim controlType As Type = Parent.GetType
-                                      Dim properties As Reflection.PropertyInfo() = controlType.GetProperties
-                                      Dim growParent As Boolean = False
-                                      For Each controlProperty In properties
-                                          If controlProperty.Name = "AutoSize" Then
-                                              Dim propertyValue As Boolean = DirectCast(controlProperty.GetValue(Parent), Boolean)
-                                              If propertyValue Then growParent = True
-                                              Exit For
-                                          End If
-                                      Next
-                                      If Not growParent Then maxParentSize = New Size(Parent.Width, Parent.Height)
-                                      If Not Parent.MaximumSize.IsEmpty Then maxParentSize = Parent.MaximumSize
-                                  End If
+        If Parent IsNot Nothing Then
+            Dim controlType As Type = Parent.GetType
+            Dim properties As Reflection.PropertyInfo() = controlType.GetProperties
+            Dim growParent As Boolean = False
+            For Each controlProperty In properties
+                If controlProperty.Name = "AutoSize" Then
+                    Dim propertyValue As Boolean = DirectCast(controlProperty.GetValue(Parent), Boolean)
+                    If propertyValue Then growParent = True
+                    Exit For
+                End If
+            Next
+            If Not growParent Then maxParentSize = New Size(Parent.Width, Parent.Height)
+            If Not Parent.MaximumSize.IsEmpty Then maxParentSize = Parent.MaximumSize
+        End If
 #End Region
-                                  Dim sizes As New List(Of Size) From {maxScreenSize, maxParentSize, maxUserSize}
-                                  Dim nonZeroWidths As New List(Of Integer)(From s In sizes Where s.Width > 0 Select s.Width)
-                                  Dim nonZeroHeights As New List(Of Integer)(From s In sizes Where s.Height > 0 Select s.Height)
-                                  Dim maxWidth As Integer = nonZeroWidths.Min
-                                  Dim maxHeight As Integer = nonZeroHeights.Min
+        Dim sizes As New List(Of Size) From {maxScreenSize, maxParentSize, maxUserSize}
+        Dim nonZeroWidths As New List(Of Integer)(From s In sizes Where s.Width > 0 Select s.Width)
+        Dim nonZeroHeights As New List(Of Integer)(From s In sizes Where s.Height > 0 Select s.Height)
+        Dim maxWidth As Integer = nonZeroWidths.Min
+        Dim maxHeight As Integer = nonZeroHeights.Min
 
-                                  Dim hScrollVisible As Boolean = unboundedSize.Width > maxWidth
-                                  Dim vscrollVisible As Boolean = unboundedSize.Height > maxHeight
+        Dim hScrollVisible As Boolean = unboundedSize.Width > maxWidth
+        Dim vscrollVisible As Boolean = unboundedSize.Height > maxHeight
 
         If AutoSize Then 'Can resize
             Dim proposedWidth = {unboundedSize.Width, maxWidth}.Min
@@ -1826,7 +1803,7 @@ Public Class TreeViewer
         End If
         With HScroll
             .Minimum = 0
-            .Maximum = {0, unboundedSize.Width - 1 + VScroll.Width}.Max
+            .Maximum = {0, unboundedSize.Width + If(vscrollVisible, VScroll.Width, 0)}.Max
             .Visible = hScrollVisible
             .Left = 0
             .Width = maxWidth
@@ -1840,28 +1817,59 @@ Public Class TreeViewer
             End If
         End With
         With VScroll
-                                      Dim maxVscrollHeight As Integer = maxHeight - If(hScrollVisible, HScroll.Height, 0)
-                                      .Minimum = 0
-                                      .Maximum = {0, unboundedSize.Height - 1 + HScroll.Height}.Max
-                                      .Visible = vscrollVisible
-                                      .Left = maxWidth - VScrollWidth
-                                      .Height = maxVscrollHeight
-                                      .Top = 0
-                                      .LargeChange = maxVscrollHeight
-                                      If .Visible Then
-                                          'If .Value > maxHeight - Height Then .Value = {maxHeight - Height, .Minimum}.Max
-                                          .Show()
-                                      Else
-                                          .Value = 0
-                                          .Hide()
-                                      End If
-                                  End With
+            Dim maxVscrollHeight As Integer = maxHeight - If(hScrollVisible, HScroll.Height, 0)
+            .Minimum = 0
+            .Maximum = {0, unboundedSize.Height + If(hScrollVisible, HScroll.Height, 0)}.Max
+            .Visible = vscrollVisible
+            .Left = maxWidth - VScrollWidth
+            .Height = maxVscrollHeight
+            .Top = 0
+            .LargeChange = maxVscrollHeight
+            If .Visible Then
+                .Show()
+            Else
+                .Value = 0
+                .Hide()
+            End If
+        End With
 #End Region
         DrawNodes_Set()
 
         REM /// FINALLY- REPAINT
         Invalidate()
         IgnoreSizeChanged = False
+
+    End Sub
+    Private Sub Columns_SetBounds()
+
+        ColumnHeaders.Draw.Clear()
+        ColumnHeaders.ForEach(Sub(headers)
+                                  Dim rollingLeft As Integer = -HScroll.Value
+                                  headers.ForEach(Sub(header)
+                                                      With header
+                                                          Dim freezeColumn As Boolean = FreezeRoot And .Index = 0
+                                                          Dim offsetFreeze As Integer = If(freezeColumn, HScroll.Value, 0)
+                                                          .Bounds_Image = If(.Image Is Nothing,
+                                                          New Rectangle(rollingLeft + offsetFreeze, 0, 0, headers.Height),
+                                                          New Rectangle(rollingLeft + offsetFreeze, CInt((headers.Height - .Image.Height) / 2), 2 + .Image.Width + 1, .Image.Height))
+                                                          Dim widthProposed As Integer = .Bounds_Image.Width
+                                                          If .SortIcon Is Nothing Then
+                                                              widthProposed += { .ContentWidth, .TextSize.Width}.Max
+                                                              .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed, 0, 0, 0)
+                                                          Else
+                                                              widthProposed += If(.ContentWidth - .TextSize.Width > .SortIcon.Width, .ContentWidth, .TextSize.Width + 2 + .SortIcon.Width + 2)
+                                                              .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed - .SortIcon.Width, CInt((headers.Height - .SortIcon.Height) / 2), .SortIcon.Width, .SortIcon.Height)
+                                                          End If
+                                                          .Bounds_Text = New Rectangle(.Bounds_Image.Right, 0, .Bounds_Sort.Left - .Bounds_Image.Right, headers.Height)
+                                                          .Bounds = New Rectangle(rollingLeft + offsetFreeze, 0, widthProposed, headers.Height)
+                                                          If freezeColumn Or .Bounds.Right > 0 And rollingLeft < Width Then ColumnHeaders.Draw.Add(header)
+                                                          rollingLeft += .Bounds.Width
+                                                      End With
+                                                  End Sub)
+                              End Sub)
+        ColumnHeaders.Draw.Sort(Function(x, y)
+                                    Return y.Index.CompareTo(x.Index)
+                                End Function)
 
     End Sub
     Private Sub RefreshNodesBounds_Lines(Nodes As NodeCollection)
@@ -1889,12 +1897,11 @@ Public Class TreeViewer
     Private Sub Node_SetBounds(node As Node)
 
         Dim y As Integer = RollingHeight - VScroll.Value
-        Dim HorizontalSpacing As Integer = 3
+        Const HorizontalSpacing As Integer = 3
 
         With node
 #Region " S E T   B O U N D S "
-            Dim x As Integer = -HScroll.Value 'If(.IsRoot And Not FreezeRoot, HScroll.Value, 0)
-            Dim leftMost As Integer = x + Offset.X + HorizontalSpacing + If(.Parent Is Nothing, If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right)
+            Dim leftMost As Integer = Offset.X + HorizontalSpacing + If(.Parent Is Nothing, If(RootLines, 6, 0), .Parent.Bounds_ShowHide.Right) - If(FreezeRoot, 0, HScroll.Value)
 
             If ExpandBeforeText Then
                 '■■■■■■■■■■■■■ P r e f e r
@@ -1971,12 +1978,10 @@ Public Class TreeViewer
 #End Region
             End If
 
-            Dim nodeHeader As ColumnHead = ColumnHeaders(.HeaderLevel)(.ColumnIndex)
-            nodeHeader.ContentWidth = If(.ColumnIndex = 0, .Bounds_Text.Right, .Bounds_Text.Width)
+            .Header.ContentWidth = If(.ColumnIndex = 0, .Bounds_Text.Right, .Bounds_Text.Width)
             .Fields.ForEach(Sub(field)
                                 With field
-                                    nodeHeader = ColumnHeaders(.HeaderLevel)(.ColumnIndex)
-                                    nodeHeader.ContentWidth = .Bounds_Text.Width
+                                    .Header.ContentWidth = .Bounds_Text.Width
                                     ._Bounds_Text.Y = node.Bounds_Text.Y
                                     ._Bounds_Text.Height = node.Bounds_Text.Height
                                 End With
@@ -2003,7 +2008,7 @@ Public Class TreeViewer
 
         If X_Change = 0 Then Exit Sub
         Ancestors.Visible.ForEach(Sub(node)
-                                      If Not (node.Parent Is Nothing And FreezeRoot) Then
+                                      If Not (FreezeRoot And {0, 1}.Contains(node.ColumnIndex)) Then
                                           node._Bounds_ShowHide.X += X_Change
                                           node._Bounds_Favorite.X += X_Change
                                           node._Bounds_Check.X += X_Change
@@ -2109,13 +2114,18 @@ Public Class TreeViewer
                                               .Node = node
 
                                           Else
-                                              node.Fields.ForEach(Sub(field)
-                                                                      If field.Bounds_Text.Contains(Location) Then
-                                                                          .Region = MouseRegion.Field
-                                                                          .Node = field
-                                                                      End If
-                                                                  End Sub)
-
+                                              Dim boundsNode As New Rectangle(node.Header.Bounds.X, node.Bounds_Text.Y, node.Header.Bounds.Width, node.Bounds_Text.Height)
+                                              If boundsNode.Contains(Location) Then
+                                                  .Region = MouseRegion.Node
+                                                  .Node = node
+                                              Else
+                                                  node.Fields.ForEach(Sub(field)
+                                                                          If field.Bounds_Text.Contains(Location) Then
+                                                                              .Region = MouseRegion.Field
+                                                                              .Node = field
+                                                                          End If
+                                                                      End Sub)
+                                              End If
                                           End If
                                           If Not .Region = MouseRegion.None Then Exit Sub
                                       End Sub)
@@ -3024,9 +3034,10 @@ Public Class Node
             End If
         End Get
     End Property
+    Friend Header_ As ColumnHead
     Public ReadOnly Property Header As ColumnHead
         Get
-            Return Tree?.ColumnHeaders(HeaderLevel)(ColumnIndex)
+            Return Header_
         End Get
     End Property
     Friend DataType_ As Type = Nothing
@@ -3504,6 +3515,7 @@ Public Class ColumnHeadCollection
                 .Parent_ = Me
                 .Style_ = Styles
                 .MouseStyle_ = MouseStyles
+                .Index_ = Count
             End With
             MyBase.Add(addHeader)
             RaiseEvent Changed()
@@ -3575,6 +3587,12 @@ End Class
         Name_ = headerName 'Can NOT be changed
         Text_ = headerName 'Can be changed
     End Sub
+    Friend Index_ As Integer = -1
+    Public ReadOnly Property Index As Integer
+        Get
+            Return Index_
+        End Get
+    End Property
     Private SortOrder_ As New SortOrder
     Public Property SortOrder As SortOrder
         Get
@@ -3647,7 +3665,9 @@ End Class
     End Property
     Friend ReadOnly Property TextSize As Size
     Private Sub TextSize_Set()
-        _TextSize = MeasureText(If(Text, String.Empty), Font)
+        'Nodes use Functions.MeasureText ( Tighter ), ColumnHead is TextRendererMeasureText ( a little wider )
+        '"Contact_Name" Functions.MeasureText.Width = 85 ( IBM Plex Mono, 8 ) but TextRendererMeasureText.Width = 91! DrawString wraps at 85, but not at 91
+        _TextSize = TextRenderer.MeasureText(If(Text, String.Empty), Font) '(If(Text, String.Empty), Font)
     End Sub
     Private Text_ As String = "Header"
     Public Property Text As String
@@ -3705,7 +3725,7 @@ End Class
     Public Overrides Function ToString() As String
 
         Dim typeString As String = If(DataType Is Nothing, String.Empty, ", Type=" & Replace(DataType.ToString, "System.", String.Empty))
-        Return Join({Text, "Width=" & Bounds.Width, typeString}, ", ")
+        Return $"Index={Index}, {Text}, Width={Bounds.Width}, {typeString}"
 
     End Function
 

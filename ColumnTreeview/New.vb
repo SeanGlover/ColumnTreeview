@@ -169,6 +169,7 @@ Public Class NodeEventArgs
 End Class
 Public Class TreeViewer
     Inherits Control
+
     Private WithEvents Karen As New Hooker
     Public WithEvents VScroll As New VScrollBar
     Public WithEvents HScroll As New HScrollBar
@@ -1036,13 +1037,12 @@ Public Class TreeViewer
     Public Overrides Property AutoSize As Boolean = True
     Public Property ShowOptions As Boolean = True
     Public Property StopMe As Boolean
-
+    Friend ReadOnly Property Hit As HitRegion
     Private Sub ColumnHeader_Clicked(sender As Object, e As ColumnEventArgs) Handles Me.ColumnClicked
 
         Ancestors.Sort(Function(x, y) String.Compare(Convert.ToString(x.SortValue, InvariantCulture), Convert.ToString(y.SortValue, InvariantCulture), StringComparison.Ordinal))
 
     End Sub
-    Friend ReadOnly Property Hit As HitRegion
     Protected Overrides Sub OnMouseDown(e As MouseEventArgs)
 
         If e IsNot Nothing Then
@@ -1503,8 +1503,9 @@ Public Class TreeViewer
                                 End If
                                 Dim boundsColumn As Rectangle = .Header.Bounds
                                 Dim boundsNode As Rectangle = If(Node.HasChildren,
-                                    .Bounds_Text, New Rectangle(boundsColumn.Left,
-                                    .Bounds_Text.Top, boundsColumn.Width, .Bounds_Text.Height))
+                                    .Bounds_Text,
+                                    New Rectangle(boundsColumn.Left, .Bounds_Text.Top, boundsColumn.Width, .Bounds_Text.Height)
+                                    )
                                 Using textBrush As New SolidBrush(.ForeColor)
                                     Using sf As New StringFormat With {
                                             .Alignment = If(Node.Header Is Nothing, StringAlignment.Near, Node.Header.GridFormat.HorizontalAlignment),
@@ -1730,6 +1731,7 @@ Public Class TreeViewer
                             End Function)
             Return nodeBounds.First
         End If
+
     End Function
     Public ReadOnly Property UnRestrictedSize As Size
         Get
@@ -1975,14 +1977,16 @@ Public Class TreeViewer
 #End Region
             End If
 
-            .Header.ContentWidth = If(.ColumnIndex = 0, .Bounds_Text.Right, .Bounds_Text.Width)
-            .Fields.ForEach(Sub(field)
-                                With field
-                                    .Header.ContentWidth = .Bounds_Text.Width
-                                    ._Bounds_Text.Y = node.Bounds_Text.Y
-                                    ._Bounds_Text.Height = node.Bounds_Text.Height
-                                End With
-                            End Sub)
+            If .Header IsNot Nothing Then
+                .Header.ContentWidth = If(.ColumnIndex = 0, .Bounds_Text.Right, .Bounds_Text.Width)
+                .Fields.ForEach(Sub(field)
+                                    With field
+                                        .Header.ContentWidth = .Bounds_Text.Width
+                                        ._Bounds_Text.Y = node.Bounds_Text.Y
+                                        ._Bounds_Text.Height = node.Bounds_Text.Height
+                                    End With
+                                End Sub)
+            End If
 #End Region
         End With
 

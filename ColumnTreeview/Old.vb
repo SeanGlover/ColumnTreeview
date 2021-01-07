@@ -6,7 +6,6 @@ Imports System.Drawing
 Imports System.Windows.Forms
 Imports System.Drawing.Drawing2D
 
-#Region " HeaderTreeView "
 Public Structure HitInfo
     Public Region As String
     Public Branch As Branch
@@ -893,7 +892,6 @@ Public Class HeaderTreeView
     End Sub
 #End Region
 End Class
-#End Region
 '///////////////////////////////////////////////////Branch COLLECTION///////////////////////////////////////////////////
 #Region " Branch Classes "
 <Serializable()> Public Class BranchCollection

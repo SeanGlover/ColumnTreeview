@@ -1518,6 +1518,10 @@ Public Class TreeViewer
                                                                   sf)
                                     End Using
                                 End Using
+                                Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is Node, DropHighlightColor, .BackColor))
+                                    boundsNode.Inflate(-1, -1)
+                                    e.Graphics.FillRectangle(Brush, boundsNode)
+                                End Using
                                 If Hit?.Node Is Node And .TipText Is Nothing Then
                                     Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, MouseOverColor))
                                         e.Graphics.FillRectangle(SemiTransparentBrush, boundsNode)
@@ -1549,6 +1553,10 @@ Public Class TreeViewer
                                                                                       sf)
                                                         End Using
                                                     End Using
+                                                    Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is fieldNode, DropHighlightColor, .BackColor))
+                                                        boundsNode.Inflate(-1, -1)
+                                                        e.Graphics.FillRectangle(Brush, boundsNode)
+                                                    End Using
                                                     e.Graphics.DrawRectangle(dottedPen, .Bounds_Text)
                                                     If Hit?.Node Is fieldNode And .TipText Is Nothing Then
                                                         Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, MouseOverColor))
@@ -1569,10 +1577,6 @@ Public Class TreeViewer
                                     End Using
                                 End If
                                 If .Selected Then
-                                    Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is Node, DropHighlightColor, .BackColor))
-                                        boundsNode.Inflate(-1, -1)
-                                        e.Graphics.FillRectangle(Brush, boundsNode)
-                                    End Using
                                     Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, SelectionColor))
                                         e.Graphics.FillRectangle(SemiTransparentBrush, boundsNode)
                                         boundsNode.Inflate(1, 1)

@@ -1519,7 +1519,7 @@ Public Class TreeViewer
                                     End Using
                                 End Using
                                 Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is Node, DropHighlightColor, .BackColor))
-                                    boundsNode.Inflate(-1, -1)
+                                    'boundsNode.Inflate(-1, -1)
                                     e.Graphics.FillRectangle(Brush, boundsNode)
                                 End Using
                                 If Hit?.Node Is Node And .TipText Is Nothing Then
@@ -1554,7 +1554,7 @@ Public Class TreeViewer
                                                         End Using
                                                     End Using
                                                     Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is fieldNode, DropHighlightColor, .BackColor))
-                                                        boundsNode.Inflate(-1, -1)
+                                                        'boundsNode.Inflate(-1, -1)
                                                         e.Graphics.FillRectangle(Brush, boundsNode)
                                                     End Using
                                                     e.Graphics.DrawRectangle(dottedPen, .Bounds_Text)
@@ -1567,7 +1567,6 @@ Public Class TreeViewer
                                                         Dim selectionBounds As Rectangle = .Bounds_Text
                                                         Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, SelectionColor))
                                                             e.Graphics.FillRectangle(SemiTransparentBrush, .Bounds_Text)
-                                                            selectionBounds.Inflate(1, 1)
                                                         End Using
                                                         e.Graphics.DrawRectangle(Pens.Black, selectionBounds)
                                                     End If
@@ -1579,7 +1578,6 @@ Public Class TreeViewer
                                 If .Selected Then
                                     Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, SelectionColor))
                                         e.Graphics.FillRectangle(SemiTransparentBrush, boundsNode)
-                                        boundsNode.Inflate(1, 1)
                                     End Using
                                     e.Graphics.DrawRectangle(Pens.Black, boundsNode)
                                 End If

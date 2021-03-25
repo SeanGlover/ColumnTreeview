@@ -255,6 +255,8 @@ Public Class TreeViewer
     Public Event NodeCollapsed(sender As Object, e As NodeEventArgs)
     Public Event NodeClicked(sender As Object, e As NodeEventArgs)
     Public Event NodeRightClicked(sender As Object, e As NodeEventArgs)
+    Public Event NodeEnter(sender As Object, e As NodeEventArgs)
+    Public Event NodeLeave(sender As Object, e As NodeEventArgs)
     Public Event NodeFavorited(sender As Object, e As NodeEventArgs)
     Public Event NodeDoubleClicked(sender As Object, e As NodeEventArgs)
 
@@ -1190,13 +1192,19 @@ Public Class TreeViewer
         If e IsNot Nothing Then
             MousePoint = e.Location
             If e.Button = MouseButtons.None Then
+                Dim redrawMe As Boolean = False
                 Dim hitInfo = HitTest(e.Location)
                 _Hit = hitInfo
                 If Hit.Column IsNot LastMouseColumn Then
                     LastMouseColumn = Hit.Column
-                    Invalidate()
+                    redrawMe = True
                 End If
                 If hitInfo.Node IsNot LastMouseNode Then
+                    If hitInfo.Node Is Nothing Then
+                        RaiseEvent NodeLeave(Me, New NodeEventArgs(LastMouseNode))
+                    Else
+                        RaiseEvent NodeEnter(Me, New NodeEventArgs(Hit.Node))
+                    End If
                     If MouseOverExpandsNode Then
                         If hitInfo.Node Is Nothing Then
                             LastMouseNode.Collapse()
@@ -1205,8 +1213,9 @@ Public Class TreeViewer
                         End If
                     End If
                     LastMouseNode = hitInfo.Node
-                    Invalidate()
+                    redrawMe = True
                 End If
+                If redrawMe Then Invalidate()
 
             ElseIf e.Button = MouseButtons.Left Then
                 With DragData

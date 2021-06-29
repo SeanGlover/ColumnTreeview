@@ -2704,9 +2704,12 @@ Public Class Node
             Else
                 If Tree.CheckBoxes = TreeViewer.CheckState.All Then
                     _CheckBox = True
+
                 ElseIf Tree.CheckBoxes = TreeViewer.CheckState.None Then
                     _CheckBox = False
+
                 ElseIf Tree.CheckBoxes = TreeViewer.CheckState.Mixed Then
+                    If Descendants.Any Then _CheckBox = Descendants.Where(Function(d) d.CheckBox).Count > 0
 
                 End If
                 Return _CheckBox
@@ -2715,14 +2718,7 @@ Public Class Node
         Set(value As Boolean)
             If value <> _CheckBox Then
                 _CheckBox = value
-                If Tree Is Nothing Then
-                Else
-                    If value Then
-                        If Tree.CheckBoxes = TreeViewer.CheckState.None Then
-                            Tree.CheckBoxes = TreeViewer.CheckState.Mixed
-                        End If
-                    End If
-                End If
+                If Tree IsNot Nothing And value And Tree.CheckBoxes = TreeViewer.CheckState.None Then Tree.CheckBoxes = TreeViewer.CheckState.Mixed
                 RequiresRepaint()
             End If
         End Set
@@ -2736,9 +2732,9 @@ Public Class Node
             Return _Checked
         End Get
         Set(value As Boolean)
-            If Not value = _Checked Then
-                If value Then CheckBox = True
+            If value <> _Checked Then
                 _Checked = value
+                'If value Then CheckBox = True
                 For Each Child In Descendants
                     Child.Checked = value
                 Next

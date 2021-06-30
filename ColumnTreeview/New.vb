@@ -2726,8 +2726,11 @@ Public Class Node
     Private _Checked As Boolean = False
     Public Property Checked As Boolean
         Get
-            If Descendants.Any Then
-                _Checked = (From d In Descendants Where d.Checked).Count = Descendants.Count
+            Dim checkboxes = Descendants.Where(Function(d) d.CheckBox)
+            If checkboxes.Any Then
+                Dim countChecked As Integer = checkboxes.Where(Function(c) c.Checked).Count
+                Dim allChecked = checkboxes.Count = countChecked
+                _Checked = allChecked
             End If
             Return _Checked
         End Get
@@ -2744,9 +2747,9 @@ Public Class Node
     End Property
     Public ReadOnly Property PartialChecked As Boolean
         Get
-            Dim _descendants As New List(Of Node)(Descendants)
-            Dim descendantCheckCount As Integer = (From d In _descendants Where d.Checked).Count
-            Return descendantCheckCount > 0 And descendantCheckCount < _descendants.Count
+            Dim checks As New List(Of Node)(Descendants.Where(Function(d) d.CheckBox))
+            Dim checkCount As Integer = checks.Where(Function(c) c.Checked).Count
+            Return checkCount > 0 And checkCount < checks.Count
         End Get
     End Property
     Private _Image As Image

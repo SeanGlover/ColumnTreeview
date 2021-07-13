@@ -1063,11 +1063,6 @@ Public Class TreeViewer
     Public Property ShowOptions As Boolean = True
     Public Property StopMe As Boolean
     Friend ReadOnly Property Hit As HitRegion
-    'Private Sub ColumnHeader_Clicked(sender As Object, e As ColumnEventArgs) Handles Me.ColumnClicked
-
-    '    Ancestors.Sort(Function(x, y) String.Compare(Convert.ToString(x.SortValue, InvariantCulture), Convert.ToString(y.SortValue, InvariantCulture), StringComparison.Ordinal))
-
-    'End Sub
     Protected Overrides Sub OnMouseDown(e As MouseEventArgs)
 
         If e IsNot Nothing Then

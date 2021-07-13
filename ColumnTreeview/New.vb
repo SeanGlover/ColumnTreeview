@@ -1028,6 +1028,29 @@ Public Class TreeViewer
         End Get
     End Property
     Public ReadOnly Property Ancestors As New NodeCollection(Me)
+    Public Property GroupBy As String
+        Get
+            Return If(Table Is Nothing OrElse Table.Columns.Count = 0, Nothing, Table.Columns(0).ColumnName)
+        End Get
+        Set(value As String)
+            If value IsNot Nothing AndAlso Table.Columns.Contains(value) Then
+                Dim tempTable = Table.Copy
+                DataSource = Nothing
+                Ancestors.Clear()
+                tempTable.Columns(value).SetOrdinal(0)
+                DataSource = tempTable
+                ColumnHeaders.ForEach(Sub(headers)
+                                          With headers
+                                              '.Styles.Theme = Theme.White
+                                              '.MouseStyles.Theme = Theme.Purple
+                                              .ForEach(Sub(header)
+                                                           'header.Image = My.Resources.beeTiny
+                                                       End Sub)
+                                          End With
+                                      End Sub)
+            End If
+        End Set
+    End Property
     Public Property MaxNodes As Integer
     Public Property LineStyle As DashStyle = DashStyle.Dot
     Public Property LineColor As Color = Color.Blue
@@ -1040,11 +1063,11 @@ Public Class TreeViewer
     Public Property ShowOptions As Boolean = True
     Public Property StopMe As Boolean
     Friend ReadOnly Property Hit As HitRegion
-    Private Sub ColumnHeader_Clicked(sender As Object, e As ColumnEventArgs) Handles Me.ColumnClicked
+    'Private Sub ColumnHeader_Clicked(sender As Object, e As ColumnEventArgs) Handles Me.ColumnClicked
 
-        Ancestors.Sort(Function(x, y) String.Compare(Convert.ToString(x.SortValue, InvariantCulture), Convert.ToString(y.SortValue, InvariantCulture), StringComparison.Ordinal))
+    '    Ancestors.Sort(Function(x, y) String.Compare(Convert.ToString(x.SortValue, InvariantCulture), Convert.ToString(y.SortValue, InvariantCulture), StringComparison.Ordinal))
 
-    End Sub
+    'End Sub
     Protected Overrides Sub OnMouseDown(e As MouseEventArgs)
 
         If e IsNot Nothing Then
@@ -1123,68 +1146,71 @@ Public Class TreeViewer
                 Dim fieldName As String = hitColumn.Name
                 Dim hitGroup = hitColumn.GridFormat.Group
                 hitColumn.SortOrder = If(hitColumn.SortOrder = SortOrder.Ascending, SortOrder.Descending, SortOrder.Ascending)
-
-                Dim columnType As Type = HitRegion.Column.DataType
-                Ancestors.ForEach(Sub(root)
-                                      If hitColumn.SortOrder = SortOrder.Ascending Then
-                                          root.Children.Sort(Function(x, y)
-                                                                 If x.Fields.Contains(fieldName) Then
-                                                                     Select Case hitGroup
-                                                                         Case AlignFormat.TypeGroup.Decimals, AlignFormat.TypeGroup.Integers
-                                                                             Return CDbl(x.Fields.Item(fieldName).Value).CompareTo(CDbl(y.Fields.Item(fieldName).Value))
-
-                                                                         Case AlignFormat.TypeGroup.Dates, AlignFormat.TypeGroup.Times
-                                                                             Return CDate(x.Fields.Item(fieldName).Value).CompareTo(CDate(y.Fields.Item(fieldName).Value))
-
-                                                                         Case AlignFormat.TypeGroup.Booleans
-                                                                             Return CBool(x.Fields.Item(fieldName).Value).CompareTo(CBool(y.Fields.Item(fieldName).Value))
-
-                                                                         Case AlignFormat.TypeGroup.Strings
-                                                                             Return x.Fields.Item(fieldName).Text.CompareTo(y.Fields.Item(fieldName).Text)
-
-                                                                         Case Else
-                                                                             'AlignFormat.TypeGroup.Images, AlignFormat.TypeGroup.None
-                                                                             Return 0
-
-                                                                     End Select
-
-                                                                 Else
-                                                                     Return 0
-                                                                 End If
-                                                             End Function)
-                                      Else
-                                          root.Children.Sort(Function(y, x)
-                                                                 If x.Fields.Contains(fieldName) Then
-                                                                     Select Case hitGroup
-                                                                         Case AlignFormat.TypeGroup.Decimals, AlignFormat.TypeGroup.Integers
-                                                                             Return CDbl(x.Fields.Item(fieldName).Value).CompareTo(CDbl(y.Fields.Item(fieldName).Value))
-
-                                                                         Case AlignFormat.TypeGroup.Dates, AlignFormat.TypeGroup.Times
-                                                                             Return CDate(x.Fields.Item(fieldName).Value).CompareTo(CDate(y.Fields.Item(fieldName).Value))
-
-                                                                         Case AlignFormat.TypeGroup.Booleans
-                                                                             Return CBool(x.Fields.Item(fieldName).Value).CompareTo(CBool(y.Fields.Item(fieldName).Value))
-
-                                                                         Case AlignFormat.TypeGroup.Strings
-                                                                             Return x.Fields.Item(fieldName).Text.CompareTo(y.Fields.Item(fieldName).Text)
-
-                                                                         Case Else
-                                                                             'AlignFormat.TypeGroup.Images, AlignFormat.TypeGroup.None
-                                                                             Return 0
-
-                                                                     End Select
-
-                                                                 Else
-                                                                     Return 0
-                                                                 End If
-                                                             End Function)
-                                      End If
-                                  End Sub)
+                If hitColumn.Index = 0 Then
+                    SortCollection(Ancestors, hitColumn)
+                Else
+                    Ancestors.ForEach(Sub(root)
+                                          SortCollection(root.Children, hitColumn)
+                                      End Sub)
+                End If
                 RaiseEvent ColumnClicked(Me, New ColumnEventArgs(HitRegion.Column))
             End If
             RequiresRepaint()
         End If
         MyBase.OnMouseDown(e)
+
+    End Sub
+    Private Sub SortCollection(collection As NodeCollection, hitColumn As ColumnHead)
+
+        Dim fieldName As String = hitColumn.Name
+        Dim hitGroup = hitColumn.GridFormat.Group
+        If hitColumn.SortOrder = SortOrder.Ascending Then
+            collection.Sort(Function(x, y)
+                                Dim xValue As Object = If(hitColumn.Index < 2, x.Value, x.Fields.Item(fieldName).Value)
+                                Dim yValue As Object = If(hitColumn.Index < 2, y.Value, y.Fields.Item(fieldName).Value)
+                                Select Case hitGroup
+                                    Case AlignFormat.TypeGroup.Decimals, AlignFormat.TypeGroup.Integers
+                                        Return CDbl(xValue).CompareTo(CDbl(yValue))
+
+                                    Case AlignFormat.TypeGroup.Dates, AlignFormat.TypeGroup.Times
+                                        Return CDate(xValue).CompareTo(CDate(yValue))
+
+                                    Case AlignFormat.TypeGroup.Booleans
+                                        Return CBool(xValue).CompareTo(CBool(yValue))
+
+                                    Case AlignFormat.TypeGroup.Strings
+                                        Return xValue.ToString.CompareTo(yValue.ToString)
+
+                                    Case Else
+                                        'AlignFormat.TypeGroup.Images, AlignFormat.TypeGroup.None
+                                        Return 0
+
+                                End Select
+                            End Function)
+        Else
+            collection.Sort(Function(y, x)
+                                Dim xValue As Object = If(hitColumn.Index < 2, x.Value, x.Fields.Item(fieldName).Value)
+                                Dim yValue As Object = If(hitColumn.Index < 2, y.Value, y.Fields.Item(fieldName).Value)
+                                Select Case hitGroup
+                                    Case AlignFormat.TypeGroup.Decimals, AlignFormat.TypeGroup.Integers
+                                        Return CDbl(xValue).CompareTo(CDbl(yValue))
+
+                                    Case AlignFormat.TypeGroup.Dates, AlignFormat.TypeGroup.Times
+                                        Return CDate(xValue).CompareTo(CDate(yValue))
+
+                                    Case AlignFormat.TypeGroup.Booleans
+                                        Return CBool(xValue).CompareTo(CBool(yValue))
+
+                                    Case AlignFormat.TypeGroup.Strings
+                                        Return xValue.ToString.CompareTo(yValue.ToString)
+
+                                    Case Else
+                                        'AlignFormat.TypeGroup.Images, AlignFormat.TypeGroup.None
+                                        Return 0
+
+                                End Select
+                            End Function)
+        End If
 
     End Sub
     Protected Overrides Sub OnMouseMove(e As MouseEventArgs)

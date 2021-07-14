@@ -1033,7 +1033,7 @@ Public Class TreeViewer
             Return If(Table Is Nothing OrElse Table.Columns.Count = 0, Nothing, Table.Columns(0).ColumnName)
         End Get
         Set(value As String)
-            If value IsNot Nothing AndAlso Table.Columns.Contains(value) Then
+            If value IsNot Nothing And Table IsNot Nothing AndAlso Table.Columns.Contains(value) Then
                 Dim tempTable = Table.Copy
                 DataSource = Nothing
                 Ancestors.Clear()

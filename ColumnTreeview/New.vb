@@ -1767,9 +1767,15 @@ Public Class TreeViewer
     End Function
     Public ReadOnly Property UnRestrictedSize As Size
         Get
-            Dim HeadersWidth As Integer = ColumnHeaders.Sum(Function(h) h.Sum(Function(header)
-                                                                                  Return header.Bounds.Width
-                                                                              End Function))
+            Dim headersWidth As Integer = 0
+            For Each headerLevel As ColumnHeadCollection In ColumnHeaders
+                For Each header As ColumnHead In headerLevel
+                    If header.Visible Then headersWidth += header.Bounds.Width
+                Next
+            Next
+            'Dim HeadersWidth As Integer = ColumnHeaders.Sum(Function(h) h.Sum(Function(header)
+            '                                                                      Return header.Bounds.Width
+            '                                                                  End Function))
             Return New Size({RollingWidth + Offset.X, HeadersWidth}.Max, RollingHeight + Offset.Y)
         End Get
     End Property
@@ -1876,27 +1882,27 @@ Public Class TreeViewer
         ColumnHeaders.Draw.Clear()
         ColumnHeaders.ForEach(Sub(headers)
                                   Dim rollingLeft As Integer = -HScroll.Value
-                                  headers.ForEach(Sub(header)
-                                                      With header
-                                                          Dim freezeColumn As Boolean = FreezeRoot And .Index = 0
-                                                          Dim offsetFreeze As Integer = If(freezeColumn, HScroll.Value, 0)
-                                                          .Bounds_Image = If(.Image Is Nothing,
-                                                          New Rectangle(rollingLeft + offsetFreeze, 0, 0, headers.Height),
-                                                          New Rectangle(rollingLeft + offsetFreeze, CInt((headers.Height - .Image.Height) / 2), 2 + .Image.Width + 1, .Image.Height))
-                                                          Dim widthProposed As Integer = .Bounds_Image.Width
-                                                          If .SortIcon Is Nothing Then
-                                                              widthProposed += { .ContentWidth, .TextSize.Width}.Max
-                                                              .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed, 0, 0, 0)
-                                                          Else
-                                                              widthProposed += If(.ContentWidth - .TextSize.Width > .SortIcon.Width, .ContentWidth, .TextSize.Width + 2 + .SortIcon.Width + 2)
-                                                              .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed - .SortIcon.Width, CInt((headers.Height - .SortIcon.Height) / 2), .SortIcon.Width, .SortIcon.Height)
-                                                          End If
-                                                          .Bounds_Text = New Rectangle(.Bounds_Image.Right, 0, .Bounds_Sort.Left - .Bounds_Image.Right, headers.Height)
-                                                          .Bounds = New Rectangle(rollingLeft + offsetFreeze, 0, widthProposed, headers.Height)
-                                                          If freezeColumn Or .Bounds.Right > 0 And rollingLeft < Width Then ColumnHeaders.Draw.Add(header)
-                                                          rollingLeft += .Bounds.Width
-                                                      End With
-                                                  End Sub)
+                                  For Each header As ColumnHead In headers.Where(Function(h) h.Visible)
+                                      With header
+                                          Dim freezeColumn As Boolean = FreezeRoot And .Index = 0
+                                          Dim offsetFreeze As Integer = If(freezeColumn, HScroll.Value, 0)
+                                          .Bounds_Image = If(.Image Is Nothing,
+             New Rectangle(rollingLeft + offsetFreeze, 0, 0, headers.Height),
+             New Rectangle(rollingLeft + offsetFreeze, CInt((headers.Height - .Image.Height) / 2), 2 + .Image.Width + 1, .Image.Height))
+                                          Dim widthProposed As Integer = .Bounds_Image.Width
+                                          If .SortIcon Is Nothing Then
+                                              widthProposed += { .ContentWidth, .TextSize.Width}.Max
+                                              .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed, 0, 0, 0)
+                                          Else
+                                              widthProposed += If(.ContentWidth - .TextSize.Width > .SortIcon.Width, .ContentWidth, .TextSize.Width + 2 + .SortIcon.Width + 2)
+                                              .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed - .SortIcon.Width, CInt((headers.Height - .SortIcon.Height) / 2), .SortIcon.Width, .SortIcon.Height)
+                                          End If
+                                          .Bounds_Text = New Rectangle(.Bounds_Image.Right, 0, .Bounds_Sort.Left - .Bounds_Image.Right, headers.Height)
+                                          .Bounds = New Rectangle(rollingLeft + offsetFreeze, 0, widthProposed, headers.Height)
+                                          If freezeColumn Or .Bounds.Right > 0 And rollingLeft < Width Then ColumnHeaders.Draw.Add(header)
+                                          rollingLeft += .Bounds.Width
+                                      End With
+                                  Next
                               End Sub)
         ColumnHeaders.Draw.Sort(Function(x, y)
                                     Return y.Index.CompareTo(x.Index)
@@ -3740,6 +3746,7 @@ End Class
             ContentWidth_ = {ContentWidth_, value}.Max
         End Set
     End Property
+    Public Property Visible As Boolean = True
     Friend Property Bounds_Image As New Rectangle
     Friend Property Bounds_Text As New Rectangle
     Friend Property Bounds_Sort As New Rectangle

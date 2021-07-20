@@ -1539,7 +1539,9 @@ Public Class TreeViewer
                                 Using textBrush As New SolidBrush(.ForeColor)
                                     Using sf As New StringFormat With {
                                             .Alignment = If(Node.Header Is Nothing, StringAlignment.Near, Node.Header.GridFormat.HorizontalAlignment),
-                                            .LineAlignment = StringAlignment.Center
+                                            .LineAlignment = StringAlignment.Center,
+                                            .FormatFlags = StringFormatFlags.NoWrap,
+                                            .Trimming = StringTrimming.None
                                         }
                                         e.Graphics.DrawString(If(mouseInTip, .TipText, .Text),
                                                                   .Font,
@@ -1886,15 +1888,16 @@ Public Class TreeViewer
                                       With header
                                           Dim freezeColumn As Boolean = FreezeRoot And .Index = 0
                                           Dim offsetFreeze As Integer = If(freezeColumn, HScroll.Value, 0)
+                                          Dim textWidth As Integer = .TextSize.Width
                                           .Bounds_Image = If(.Image Is Nothing,
              New Rectangle(rollingLeft + offsetFreeze, 0, 0, headers.Height),
              New Rectangle(rollingLeft + offsetFreeze, CInt((headers.Height - .Image.Height) / 2), 2 + .Image.Width + 1, .Image.Height))
                                           Dim widthProposed As Integer = .Bounds_Image.Width
                                           If .SortIcon Is Nothing Then
-                                              widthProposed += { .ContentWidth, .TextSize.Width}.Max
+                                              widthProposed += { .ContentWidth, textWidth}.Max
                                               .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed, 0, 0, 0)
                                           Else
-                                              widthProposed += If(.ContentWidth - .TextSize.Width > .SortIcon.Width, .ContentWidth, .TextSize.Width + 2 + .SortIcon.Width + 2)
+                                              widthProposed += If(.ContentWidth - textWidth > .SortIcon.Width, .ContentWidth, textWidth + 2 + .SortIcon.Width + 2)
                                               .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed - .SortIcon.Width, CInt((headers.Height - .SortIcon.Height) / 2), .SortIcon.Width, .SortIcon.Height)
                                           End If
                                           .Bounds_Text = New Rectangle(.Bounds_Image.Right, 0, .Bounds_Sort.Left - .Bounds_Image.Right, headers.Height)
@@ -2078,6 +2081,8 @@ Public Class TreeViewer
     End Sub
     Protected Overrides Sub OnFontChanged(e As EventArgs)
 
+        ColumnHeaders.Styles.Font = Font
+        ColumnHeaders.MouseStyles.Font = Font
         Ancestors.All.ForEach(Sub(node)
                                   node.Font = Font
                                   node.Fields.ForEach(Sub(f)
@@ -2832,7 +2837,7 @@ Public Class Node
     Friend ReadOnly Property TextWidth As Integer
     Private Sub TextWidth_Set()
 
-        _TextWidth = MeasureText(Text, Font).Width   'TextRenderer.MeasureText(If(Text, String.Empty), Font).Width
+        _TextWidth = 3 + MeasureText(Text, Font).Width 'TextRenderer.MeasureText(If(Text, String.Empty), Font).Width 'MeasureText(Text, Font).Width
         _Bounds_Text.Width = TextWidth
         RequiresRepaint()
 

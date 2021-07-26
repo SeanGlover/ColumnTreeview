@@ -1775,10 +1775,7 @@ Public Class TreeViewer
                     If header.Visible Then headersWidth += header.Bounds.Width
                 Next
             Next
-            'Dim HeadersWidth As Integer = ColumnHeaders.Sum(Function(h) h.Sum(Function(header)
-            '                                                                      Return header.Bounds.Width
-            '                                                                  End Function))
-            Return New Size({RollingWidth + Offset.X, HeadersWidth}.Max, RollingHeight + Offset.Y)
+            Return New Size({RollingWidth + Offset.X, headersWidth}.Max, RollingHeight + Offset.Y)
         End Get
     End Property
     Friend Sub RequiresRepaint()
@@ -1830,8 +1827,8 @@ Public Class TreeViewer
         If AutoSize Then 'Can resize
             Dim proposedWidth = {unboundedSize.Width, maxWidth}.Min
             Dim proposedHeight = {unboundedSize.Height, maxHeight}.Min
-            If hScrollVisible Then proposedHeight = {proposedHeight + HScrollHeight, maxHeight}.Min
-            If vscrollVisible Then proposedWidth = {proposedWidth + VScrollWidth, maxWidth}.Min
+            If hScrollVisible Then proposedHeight = {proposedHeight + HScroll.Height, maxHeight}.Min
+            If vscrollVisible Then proposedWidth = {proposedWidth + VScroll.Width, maxWidth}.Min
             Width = proposedWidth
             Height = proposedHeight
             maxWidth = Width

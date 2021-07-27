@@ -820,10 +820,15 @@ Public Class TreeViewer
                 End If
 #End Region
                 If Table IsNot Nothing Then
+                    Dim columnNames As New List(Of String)(From ch In Table.Columns Select DirectCast(ch, DataColumn).ColumnName)
+                    Dim columnHeads As New ColumnHeadCollection(columnNames.ToArray)
                     With ColumnHeaders
                         .Clear()
-                        Dim columnNames As New List(Of String)(From ch In Table.Columns Select DirectCast(ch, DataColumn).ColumnName)
-                        If columnNames.Any Then .Add(New ColumnHeadCollection(columnNames.ToArray))
+                        If Table.TableName = "xyz" Then
+                            columnHeads.Styles.Height = 99
+
+                        End If
+                        If columnNames.Any Then .Add(columnHeads)
                         If ColumnHeaders.Any Then RecursiveBuild(Ancestors, 0, Table)
                     End With
                     _LoadTime = Now.Subtract(startLoad)
@@ -1652,7 +1657,7 @@ Public Class TreeViewer
                                 If .HasChildren And .Expanded Then
                                     Dim childLast_bounds As Rectangle = Node_LeftMostBounds(.Children.Last)
                                     Dim verticalNodeLineTop_xy As New Point(objectBounds.Left + objectCenter, objectBounds.Bottom)
-                                    Dim verticalNodeLineBottom_xy As New Point(objectBounds.Left + objectCenter, {childLast_bounds.Top + objectCenter, ClientRectangle.Height}.Min)
+                                    Dim verticalNodeLineBottom_xy As New Point(objectBounds.Left + objectCenter, {childLast_bounds.Top + objectCenter, ClientRectangle.Height}.Min - 2)
                                     If FreezeRoot Then
                                         e.Graphics.FillRectangle(Brushes.Gainsboro,
                                                                  New Rectangle(verticalNodeLineTop_xy.X - 4,
@@ -3361,10 +3366,13 @@ Public Class HeaderLevels
             With addHeaders
                 .Parent_ = Parent
                 .Styles = Styles
+                If .Styles.Height = 99 Then Stop
                 .MouseStyles = MouseStyles
+                If .Styles.Height = 99 Then Stop
                 .ForEach(Sub(header)
                              header.Font = Parent.Font
                          End Sub)
+                If .Styles.Height = 99 Then Stop
                 AddHandler .Changed, AddressOf OnChanged
             End With
             MyBase.Add(addHeaders)
@@ -3444,10 +3452,10 @@ Public Class ColumnHeadCollection
         Set(value As CellStyle)
             If value <> Styles_ Then
                 Styles_ = value
-                ForEach(Sub(header)
-                            header.Style_ = value
-                        End Sub)
-                Parent?.RequiresRepaint()
+                For Each header As ColumnHead In Me
+                    header.Style_ = value
+                Next
+                'Parent?.RequiresRepaint()
             End If
         End Set
     End Property
@@ -3466,10 +3474,10 @@ Public Class ColumnHeadCollection
         Set(value As CellStyle)
             If value <> MouseStyles_ Then
                 MouseStyles_ = value
-                ForEach(Sub(header)
-                            header.MouseStyle_ = value
-                        End Sub)
-                Parent?.RequiresRepaint()
+                For Each header As ColumnHead In Me
+                    header.MouseStyle_ = value
+                Next
+                'Parent?.RequiresRepaint()
             End If
         End Set
     End Property

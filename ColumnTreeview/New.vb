@@ -214,6 +214,12 @@ Public Class TreeViewer
         .Margin = New Padding(0)}
 #End Region
 
+    Private WithEvents FindAndReplace As New FindReplace With
+    {
+        .Margin = New Padding(0),
+        .BackgroundTheme = Theme.Gray
+    }
+
     Private IgnoreSizeChanged As Boolean = False
     '■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ C O N S T A N T S
     Private Const CheckHeight As Integer = 14
@@ -419,6 +425,10 @@ Public Class TreeViewer
     Protected Overrides Sub InitLayout()
         REM /// FIRES AFTER BEING ADDED TO ANOTHER CONTROL...ADD TREEVIEW AFTER LOADING NODES
         RequiresRepaint()
+        Controls.Add(FindAndReplace)
+        AddHandler KeyDown, AddressOf KeyDown_FindReplace
+        AddHandler FindAndReplace.FindChanged, AddressOf FindRequest
+        AddHandler FindAndReplace.ZoneClicked, AddressOf FindReplace_zoneClicked
         MyBase.InitLayout()
     End Sub
 
@@ -1312,6 +1322,92 @@ Public Class TreeViewer
     End Sub
 #End Region
 
+#Region " FIND AND REPLACE"
+    Private Sub KeyDown_FindReplace(sender As Object, e As KeyEventArgs)
+
+        If ModifierKeys = Keys.Control Then
+            If e.KeyCode = Keys.F Then
+                With FindAndReplace
+                    .DataSource = Ancestors.All
+                    .Show()
+                    If SelectedNodes.Any Then .FindControl.Text = SelectedNodes.First.Text
+                End With
+            End If
+        End If
+
+    End Sub
+    Private Sub FindReplace_zoneClicked(sender As Object, e As ZoneEventArgs)
+
+        Dim textSearch As String = Text
+        If e.Zone.Name = Zone.Identifier.MatchCase Or e.Zone.Name = Zone.Identifier.MatchWord Or e.Zone.Name = Zone.Identifier.RegEx Then
+            FindRequest(Nothing, New FindEventArgs(Nothing))
+
+        ElseIf e.Zone.Name = Zone.Identifier.Close Then
+            For Each node As Node In Ancestors.All
+                node.BackColor = Color.Transparent
+            Next
+
+        ElseIf e.Zone.Name = Zone.Identifier.GotoNext Then
+            If FindAndReplace.CurrentMatch.Key >= 0 Then
+                Dim Match = FindAndReplace.CurrentMatch
+                Dim nodeTionary As New Dictionary(Of Integer, Node)
+                For Each node In Ancestors.All
+                    node.BackColor = Color.Transparent
+                    node._Selected = False
+                    nodeTionary.Add(node.IndexAll, node)
+                Next
+                Dim nodeMatch = nodeTionary(Match.Key)
+                nodeMatch.BackColor = Color.Yellow
+                nodeMatch?.Parent.Expand()
+                RequiresRepaint()
+
+            End If
+
+        ElseIf e.Zone.Name = Zone.Identifier.ReplaceOne Then
+            If FindAndReplace.CurrentMatch.Key >= 0 Then
+                Dim replacementText As String = FindAndReplace.ReplaceControl.Text
+                Dim lengthOfWordToInsert As Integer = replacementText.Length
+                Dim lengthOfWordToRemove As Integer = FindAndReplace.CurrentMatch.Value.Length
+                textSearch = textSearch.Remove(FindAndReplace.CurrentMatch.Key, lengthOfWordToRemove)
+                textSearch = textSearch.Insert(FindAndReplace.CurrentMatch.Key, replacementText)
+                Text = textSearch
+                FindRequest(Nothing, New FindEventArgs(Nothing))
+            End If
+
+        ElseIf e.Zone.Name = Zone.Identifier.ReplaceAll Then
+            If FindAndReplace.CurrentMatch.Key >= 0 Then
+                Dim replacementText As String = FindAndReplace.ReplaceControl.Text
+                Dim lengthOfWordToInsert As Integer = replacementText.Length
+                Dim ReverseOrderMatches = FindAndReplace.Matches.OrderByDescending(Function(x) x.Key)
+                For Each match In ReverseOrderMatches
+                    Dim lengthOfWordToRemove As Integer = match.Value.Length
+                    textSearch = textSearch.Remove(match.Key, lengthOfWordToRemove)
+                    textSearch = textSearch.Insert(match.Key, replacementText)
+                Next
+                If FindAndReplace.CurrentMatch.Key >= 0 Then
+                    Text = textSearch
+                    FindRequest(Nothing, New FindEventArgs(Nothing))
+                End If
+            End If
+
+        End If
+    End Sub
+    Private Sub FindRequest(sender As Object, e As FindEventArgs)
+
+        Dim nodeTionary As New Dictionary(Of Integer, Node)
+        For Each node In Ancestors.All
+            node.BackColor = Color.Transparent
+            nodeTionary.Add(node.IndexAll, node)
+        Next
+        For Each match In FindAndReplace.Matches
+            Dim node = nodeTionary(match.Key)
+            node.BackColor = Color.Yellow
+            node?.Parent.Expand()
+        Next
+        RequiresRepaint()
+
+    End Sub
+#End Region
 #Region " DRAG & DROP "
     Private Sub OnDragStart()
 
@@ -1541,6 +1637,10 @@ Public Class TreeViewer
                                     .Bounds_Text,
                                     New Rectangle(boundsColumn.Left, .Bounds_Text.Top, boundsColumn.Width, .Bounds_Text.Height)
                                     )
+                                Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is Node, DropHighlightColor, .BackColor))
+                                    'boundsNode.Inflate(-1, -1)
+                                    e.Graphics.FillRectangle(Brush, boundsNode)
+                                End Using
                                 Using textBrush As New SolidBrush(.ForeColor)
                                     Using sf As New StringFormat With {
                                             .Alignment = If(Node.Header Is Nothing, StringAlignment.Near, Node.Header.GridFormat.HorizontalAlignment),
@@ -1554,10 +1654,6 @@ Public Class TreeViewer
                                                                   boundsNode,
                                                                   sf)
                                     End Using
-                                End Using
-                                Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is Node, DropHighlightColor, .BackColor))
-                                    'boundsNode.Inflate(-1, -1)
-                                    e.Graphics.FillRectangle(Brush, boundsNode)
                                 End Using
                                 If Hit?.Node Is Node And .TipText Is Nothing Then
                                     Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, MouseOverColor))
@@ -1578,6 +1674,10 @@ Public Class TreeViewer
                                                 boundsColumn = .Header.Bounds
                                                 ._Bounds_Text = New Rectangle(boundsColumn.Left, Node.Bounds_Text.Top, boundsColumn.Width - 1, Node.Bounds_Text.Height)
                                                 If .Bounds_Text.Right > 0 And .Bounds_Text.Left < Width Then
+                                                    Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is fieldNode, DropHighlightColor, .BackColor))
+                                                        'boundsNode.Inflate(-1, -1)
+                                                        e.Graphics.FillRectangle(Brush, boundsNode)
+                                                    End Using
                                                     Using textBrush As New SolidBrush(.ForeColor)
                                                         Using sf As New StringFormat With {
                                                                 .Alignment = fieldNode.Header.GridFormat.HorizontalAlignment,
@@ -1590,10 +1690,6 @@ Public Class TreeViewer
                                                                                       sf)
                                                         End Using
                                                     End Using
-                                                    Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is fieldNode, DropHighlightColor, .BackColor))
-                                                        'boundsNode.Inflate(-1, -1)
-                                                        e.Graphics.FillRectangle(Brush, boundsNode)
-                                                    End Using
                                                     e.Graphics.DrawRectangle(dottedPen, .Bounds_Text)
                                                     If Hit?.Node Is fieldNode And .TipText Is Nothing Then
                                                         Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, MouseOverColor))
@@ -1602,8 +1698,9 @@ Public Class TreeViewer
                                                     End If
                                                     If .Selected Then
                                                         Dim selectionBounds As Rectangle = .Bounds_Text
+                                                        selectionBounds.Offset(-1, -1)
                                                         Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, SelectionColor))
-                                                            e.Graphics.FillRectangle(SemiTransparentBrush, .Bounds_Text)
+                                                            e.Graphics.FillRectangle(SemiTransparentBrush, selectionBounds)
                                                         End Using
                                                         e.Graphics.DrawRectangle(Pens.Black, selectionBounds)
                                                     End If
@@ -1613,10 +1710,12 @@ Public Class TreeViewer
                                     End Using
                                 End If
                                 If .Selected Then
+                                    boundsNode.Offset(-1, -1)
                                     Using SemiTransparentBrush As New SolidBrush(Color.FromArgb(128, SelectionColor))
                                         e.Graphics.FillRectangle(SemiTransparentBrush, boundsNode)
                                     End Using
                                     e.Graphics.DrawRectangle(Pens.Black, boundsNode)
+                                    boundsNode.Offset(1, 1)
                                 End If
                                 If .CheckBox Then
                                     If FreezeRoot Then
@@ -2922,6 +3021,11 @@ Public Class Node
     Public ReadOnly Property Index As Integer
         Get
             Return _Index
+        End Get
+    End Property
+    Public ReadOnly Property IndexAll As Integer
+        Get
+            Return If(Tree Is Nothing, 0, Tree.Ancestors.All.IndexOf(Me))
         End Get
     End Property
     Public ReadOnly Property Height As Integer

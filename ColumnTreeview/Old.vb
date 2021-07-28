@@ -51,7 +51,7 @@ Public Class HeaderTreeView
                 _CollapsedIcon = FromBase64String(LightOff)
         End Select
     End Sub
-    Private Function FromBase64String(ByVal ImageString As String) As Image
+    Private Function FromBase64String( ImageString As String) As Image
         Dim b() As Byte = Convert.FromBase64String(ImageString)
         Dim Image As Image
         Try
@@ -96,7 +96,7 @@ Public Class HeaderTreeView
         Get
             Return mDefaultContextMenuStrip
         End Get
-        Set(ByVal Value As Boolean)
+        Set( Value As Boolean)
             If Value <> mDefaultContextMenuStrip Then
                 mDefaultContextMenuStrip = Value
                 If Value Then
@@ -130,7 +130,7 @@ Public Class HeaderTreeView
         Get
             Return mBranchLineStyle
         End Get
-        Set(ByVal Value As System.Drawing.Drawing2D.DashStyle)
+        Set( Value As System.Drawing.Drawing2D.DashStyle)
             If Value <> mBranchLineStyle Then
                 mBranchLineStyle = Value
                 Invalidate()
@@ -142,7 +142,7 @@ Public Class HeaderTreeView
         Get
             Return mBranchLineColor
         End Get
-        Set(ByVal Value As Color)
+        Set( Value As Color)
             mBranchLineColor = Value
             Invalidate()
         End Set
@@ -152,7 +152,7 @@ Public Class HeaderTreeView
         Get
             Return mRootLines
         End Get
-        Set(ByVal Value As Boolean)
+        Set( Value As Boolean)
             mRootLines = Value
             Invalidate()
         End Set
@@ -162,7 +162,7 @@ Public Class HeaderTreeView
         Get
             Return mGridLines
         End Get
-        Set(ByVal Value As Boolean)
+        Set( Value As Boolean)
             mGridLines = Value
             Invalidate()
         End Set
@@ -172,7 +172,7 @@ Public Class HeaderTreeView
         Get
             Return mExpandStyle
         End Get
-        Set(ByVal Value As TreeExpanderStyle)
+        Set( Value As TreeExpanderStyle)
             If Value <> mExpandStyle Then
                 mExpandStyle = Value
                 LoadImages()
@@ -184,7 +184,7 @@ Public Class HeaderTreeView
         Get
             Return mIndent
         End Get
-        Set(ByVal Value As Integer)
+        Set( Value As Integer)
             mIndent = Value
         End Set
     End Property
@@ -195,7 +195,7 @@ Public Class HeaderTreeView
         Get
             Return SortType_
         End Get
-        Set(ByVal Value As SortType)
+        Set( Value As SortType)
             SortType_ = Value
             mBranches.SortType = SortType_
             Invalidate()
@@ -206,7 +206,7 @@ Public Class HeaderTreeView
         Get
             Return mHeaderStyle
         End Get
-        Set(ByVal Value As Border3DStyle)
+        Set( Value As Border3DStyle)
             mHeaderStyle = Value
         End Set
     End Property
@@ -218,7 +218,7 @@ Public Class HeaderTreeView
         Get
             Return mSelectStyle
         End Get
-        Set(ByVal value As SelectStyle)
+        Set( value As SelectStyle)
             mSelectStyle = value
         End Set
     End Property
@@ -227,7 +227,7 @@ Public Class HeaderTreeView
         Get
             Return mBackImageAlpha
         End Get
-        Set(ByVal value As Integer)
+        Set( value As Integer)
             If value >= 0 AndAlso value <= 255 Then
                 mBackImageAlpha = value
             Else : mBackImageAlpha = 0
@@ -279,7 +279,7 @@ Public Class HeaderTreeView
     End Property
 #End Region
 #Region " Drawing "
-    Protected Overrides Sub DrawItems(ByVal Graphics As Graphics, ByVal Rect As Rectangle)
+    Protected Overrides Sub DrawItems( Graphics As Graphics,  Rect As Rectangle)
 
         If Headers.Any Then
             DrawBranches(Graphics)
@@ -289,7 +289,7 @@ Public Class HeaderTreeView
         End If
 
     End Sub
-    Private Sub DrawBranches(ByVal Graphics As Graphics)
+    Private Sub DrawBranches( Graphics As Graphics)
 
         For Each Header As Header In Headers
             If IsNothing(BackgroundImage) Then
@@ -367,7 +367,7 @@ Public Class HeaderTreeView
         Stop
 
     End Sub
-    Private Sub DrawSelection(ByVal Graphics As Graphics, ByVal Rect As Rectangle, ByVal Color As Color)
+    Private Sub DrawSelection( Graphics As Graphics,  Rect As Rectangle,  Color As Color)
         Using SelectedBrush As New SolidBrush(Color)
             If SelectStyle = SelectStyle.Box Then
                 Graphics.FillRectangle(SelectedBrush, Rect)
@@ -379,7 +379,7 @@ Public Class HeaderTreeView
             End If
         End Using
     End Sub
-    Private Sub DrawBranchLines(ByVal g As Graphics, ByVal Branch As Branch)
+    Private Sub DrawBranchLines( g As Graphics,  Branch As Branch)
 
         Using Pen As New Pen(mBranchLineColor, 1)
             Pen.DashStyle = mBranchLineStyle
@@ -403,7 +403,7 @@ Public Class HeaderTreeView
         End Using
 
     End Sub
-    Private Sub DrawGridLines(ByVal g As Graphics)
+    Private Sub DrawGridLines( g As Graphics)
         For Each Header As Header In Headers
             Using Pen As New Pen(Color.Gainsboro, 1)
                 Dim Dashes As Single() = {2, 2, 2, 2}
@@ -412,7 +412,7 @@ Public Class HeaderTreeView
             End Using
         Next
     End Sub
-    Private Function DrawHeaderImage(ByVal Source As Bitmap, ByVal Section As Rectangle) As Bitmap
+    Private Function DrawHeaderImage( Source As Bitmap,  Section As Rectangle) As Bitmap
         Dim Bitmap As Bitmap = New Bitmap(Section.Width, Section.Height)
         Using G As Graphics = Graphics.FromImage(Bitmap)
             G.DrawImage(Source, 0, 0, Section, GraphicsUnit.Pixel)
@@ -462,7 +462,7 @@ Public Class HeaderTreeView
             End Using
         End Using
     End Sub
-    Public Function DrawRoundedRectangle(ByVal Rect As Rectangle, Optional ByVal Corner As Integer = 10) As GraphicsPath
+    Public Function DrawRoundedRectangle( Rect As Rectangle, Optional  Corner As Integer = 10) As GraphicsPath
         Dim Graphix As New System.Drawing.Drawing2D.GraphicsPath
         Dim ArcRect As New RectangleF(Rect.Location, New SizeF(Corner, Corner))
         Graphix.AddArc(ArcRect, 180, 90)
@@ -573,7 +573,7 @@ Public Class HeaderTreeView
         End Set
     End Property
     '▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
-    Public Sub Load(ByVal DataSet As DataSet)
+    Public Sub Load( DataSet As DataSet)
 
         mDataSet = DataSet
         For Each Table As DataTable In DataSet.Tables
@@ -617,7 +617,7 @@ Public Class HeaderTreeView
         Invalidate()
 
     End Sub
-    Protected Friend Function HitTest(ByVal e As MouseEventArgs) As HitInfo
+    Protected Friend Function HitTest( e As MouseEventArgs) As HitInfo
         Dim Hit As HitInfo = Nothing
         Dim Q_RowHit As IEnumerable(Of Branch) = (From A In Branches.All Where e.Y >= A.Bounds.Top AndAlso e.Y <= A.Bounds.Bottom Select A)
         If Not Q_RowHit.Count = 0 Then
@@ -640,7 +640,7 @@ Public Class HeaderTreeView
         End If
         Return Hit
     End Function
-    Protected Friend Function HitTest(ByVal X As Integer, ByVal Y As Integer) As HitInfo
+    Protected Friend Function HitTest( X As Integer,  Y As Integer) As HitInfo
         Dim Hit As HitInfo = Nothing
         Dim Q_RowHit As IEnumerable(Of Branch) = (From A In Branches.All Where Y >= A.Bounds.Top AndAlso Y <= A.Bounds.Bottom Select A)
         If Not Q_RowHit.Count = 0 Then
@@ -665,16 +665,16 @@ Public Class HeaderTreeView
     End Function
 
 #Region " Overrides "
-    Protected Shadows Sub OnPreviewKeyDown(ByVal sender As Object, ByVal e As PreviewKeyDownEventArgs)
+    Protected Shadows Sub OnPreviewKeyDown( sender As Object,  e As PreviewKeyDownEventArgs)
         Select Case (e.KeyCode)
             Case Keys.Down, Keys.Up, Keys.Left, Keys.Right, Keys.Enter
                 e.IsInputKey = True
         End Select
     End Sub
-    Protected Overrides Sub OnKeyUp(ByVal e As KeyEventArgs)
+    Protected Overrides Sub OnKeyUp( e As KeyEventArgs)
         If e.KeyCode = Keys.ShiftKey Then MultiSelecting = False
     End Sub
-    Protected Overrides Sub OnKeyDown(ByVal e As KeyEventArgs)
+    Protected Overrides Sub OnKeyDown( e As KeyEventArgs)
         MyBase.OnKeyDown(e)
         Select Case (e.KeyCode)
             Case Keys.Down, Keys.Up, Keys.Left, Keys.Right, Keys.Enter, Keys.ShiftKey
@@ -707,7 +707,7 @@ Public Class HeaderTreeView
                 End If
         End Select
     End Sub
-    Protected Overrides Sub OnMouseDown(ByVal e As MouseEventArgs)
+    Protected Overrides Sub OnMouseDown( e As MouseEventArgs)
         MyBase.OnMouseDown(e)
         Dragging = False
         Dim Hit As HitInfo = HitTest(e)
@@ -738,7 +738,7 @@ Public Class HeaderTreeView
             Invalidate()
         End If
     End Sub
-    Protected Overrides Sub OnMouseMove(ByVal e As MouseEventArgs)
+    Protected Overrides Sub OnMouseMove( e As MouseEventArgs)
         MyBase.OnMouseMove(e)
         If ItemClicked AndAlso e.Button = MouseButtons.Left Then
             Refresh()
@@ -762,7 +762,7 @@ Public Class HeaderTreeView
             ClickedItem = Nothing
         End If
     End Sub
-    Protected Overrides Sub OnMouseUp(ByVal e As MouseEventArgs)
+    Protected Overrides Sub OnMouseUp( e As MouseEventArgs)
         MyBase.OnMouseUp(e)
         Dim Hit As HitInfo = HitTest(e)
         If Not IsNothing(Hit.Branch) AndAlso Not Hit.Region = "±" AndAlso Not Dragging Then
@@ -778,7 +778,7 @@ Public Class HeaderTreeView
         ClickedItem = Nothing
         Refresh()
     End Sub
-    Protected Overrides Sub OnGiveFeedback(ByVal e As GiveFeedbackEventArgs)
+    Protected Overrides Sub OnGiveFeedback( e As GiveFeedbackEventArgs)
         MyBase.OnGiveFeedback(e)
         e.UseDefaultCursors = False
         If mCursor Then
@@ -787,15 +787,15 @@ Public Class HeaderTreeView
             Cursor.Current = New Cursor(DragImage.GetHicon())
         End If
     End Sub
-    Protected Overrides Sub OnDragEnter(ByVal e As DragEventArgs)
+    Protected Overrides Sub OnDragEnter( e As DragEventArgs)
         MyBase.OnDragEnter(e)
     End Sub
-    Protected Overrides Sub OnDragLeave(ByVal e As System.EventArgs)
+    Protected Overrides Sub OnDragLeave( e As System.EventArgs)
         MyBase.OnDragLeave(e)
         DropHighlight = Nothing
         Refresh()
     End Sub
-    Protected Overrides Sub OnDragOver(ByVal e As DragEventArgs)
+    Protected Overrides Sub OnDragOver( e As DragEventArgs)
         e.Effect = DragDropEffects.Copy
         Dim X As Integer = PointToClient(New Point(e.X, e.Y)).X, Y As Integer = PointToClient(New Point(e.X, e.Y)).Y
         Dim Hit As HitInfo = HitTest(X, Y)
@@ -813,7 +813,7 @@ Public Class HeaderTreeView
         e.Data.SetData(GetType(Object), HitObject)
         Refresh()
     End Sub
-    Protected Overrides Sub OnDragDrop(ByVal e As DragEventArgs)
+    Protected Overrides Sub OnDragDrop( e As DragEventArgs)
         Dim X As Integer = PointToClient(New Point(e.X, e.Y)).X, Y As Integer = PointToClient(New Point(e.X, e.Y)).Y
         Dim Hit As HitInfo = HitTest(X, Y)
         Dim HitObject As Object = Nothing
@@ -831,7 +831,7 @@ Public Class HeaderTreeView
     End Sub
 #End Region
 #Region " Events "
-    Protected Friend Sub OnCMSClick(ByVal sender As Object, ByVal e As EventArgs)
+    Protected Friend Sub OnCMSClick( sender As Object,  e As EventArgs)
         Dim TSMI As ToolStripMenuItem = DirectCast(sender, ToolStripMenuItem)
         If TSMI.Text.Contains("Expand") OrElse TSMI.Text.Contains("Collapse") Then
             For Each Branch As Branch In BranchCollection
@@ -866,27 +866,27 @@ Public Class HeaderTreeView
             Load(DS)
         End If
     End Sub
-    Public Event BranchesChanged(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnBranchesChanged(ByVal sender As Object, ByVal e As EventArgs)
+    Public Event BranchesChanged( sender As Object,  e As EventArgs)
+    Protected Friend Sub OnBranchesChanged( sender As Object,  e As EventArgs)
         Invalidate()
         RaiseEvent BranchesChanged(sender, e)
     End Sub
-    Public Event SelectedBranchesChanged(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnSelectedBranchesChanged(ByVal sender As Object, ByVal e As EventArgs)
+    Public Event SelectedBranchesChanged( sender As Object,  e As EventArgs)
+    Protected Friend Sub OnSelectedBranchesChanged( sender As Object,  e As EventArgs)
         Invalidate()
         RaiseEvent SelectedBranchesChanged(sender, e)
     End Sub
-    Public Event SelectedItemsChanged(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnSelectedItemsChanged(ByVal sender As Object, ByVal e As EventArgs)
+    Public Event SelectedItemsChanged( sender As Object,  e As EventArgs)
+    Protected Friend Sub OnSelectedItemsChanged( sender As Object,  e As EventArgs)
         RaiseEvent SelectedItemsChanged(sender, e)
     End Sub
-    Public Event BeforeExpand(ByVal Branch As Branch, ByVal e As CancelEventArgs)
-    Public Event AfterExpand(ByVal Branch As Branch, ByVal e As EventArgs)
-    Public Event BeforeCollapse(ByVal Branch As Branch, ByVal e As CancelEventArgs)
-    Public Event AfterCollapse(ByVal Branch As Branch, ByVal e As EventArgs)
-    Public Event DragStart(ByVal sender As Object, ByVal e As DragEventArgs)
-    Public Event ItemClick(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnItemClick(ByVal sender As Object, ByVal e As EventArgs)
+    Public Event BeforeExpand( Branch As Branch,  e As CancelEventArgs)
+    Public Event AfterExpand( Branch As Branch,  e As EventArgs)
+    Public Event BeforeCollapse( Branch As Branch,  e As CancelEventArgs)
+    Public Event AfterCollapse( Branch As Branch,  e As EventArgs)
+    Public Event DragStart( sender As Object,  e As DragEventArgs)
+    Public Event ItemClick( sender As Object,  e As EventArgs)
+    Protected Friend Sub OnItemClick( sender As Object,  e As EventArgs)
         Invalidate()
         RaiseEvent ItemClick(sender, e)
     End Sub
@@ -899,7 +899,7 @@ End Class
     Public ReadOnly Property Tree As HeaderTreeView
     Public ReadOnly Property Parent As Branch
 
-    Public Sub New(ByVal Parent As HeaderTreeView, Optional ByVal Branch As Branch = Nothing)
+    Public Sub New( Parent As HeaderTreeView, Optional  Branch As Branch = Nothing)
         Tree = Parent
         _Parent = Branch
     End Sub
@@ -928,7 +928,7 @@ End Class
         Get
             Return SortType_
         End Get
-        Set(ByVal Value As SortType)
+        Set( Value As SortType)
             SortType_ = Value
             Sort()
             For Each Branch As Branch In Me
@@ -961,7 +961,7 @@ End Class
     Public Overloads Function Add(Text As String) As Branch
         Return Add(New Branch With {.Text = Text})
     End Function
-    Public Overloads Function Add(ByVal AddBranch As Branch) As Branch
+    Public Overloads Function Add( AddBranch As Branch) As Branch
 
         If AddBranch IsNot Nothing Then
             With AddBranch
@@ -1002,7 +1002,7 @@ End Class
         Return AddBranch
 
     End Function
-    Public Shadows Function AddRange(ByVal newBranches As Branch()) As List(Of Branch)
+    Public Shadows Function AddRange( newBranches As Branch()) As List(Of Branch)
 
         If newBranches Is Nothing Then
             Return Nothing
@@ -1012,13 +1012,13 @@ End Class
         End If
 
     End Function
-    Public Shadows Function Find(ByVal Name As String) As List(Of Branch)
+    Public Shadows Function Find( Name As String) As List(Of Branch)
 
         Dim findBranches As New List(Of Branch)(From A In All Where Name = A.Name Select A)
         Return findBranches
 
     End Function
-    Public Shadows Sub Insert(index As Integer, ByVal Value As Branch)
+    Public Shadows Sub Insert(index As Integer,  Value As Branch)
 
         MyBase.Insert(index, Value)
         OnChanged(Me, New EventArgs)
@@ -1044,7 +1044,7 @@ End Class
     End Sub
 
     Private RelativeIndex As Integer = 0
-    Private Sub GetRowIndex(ByVal Branches As BranchCollection)
+    Private Sub GetRowIndex( Branches As BranchCollection)
         For Each N As Branch In Branches
             If N.Visible Then
                 N.RowIndex = RelativeIndex
@@ -1054,8 +1054,8 @@ End Class
         Next
     End Sub
 #Region " Events "
-    Public Event Changed(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnChanged(ByVal sender As Object, ByVal e As EventArgs)
+    Public Event Changed( sender As Object,  e As EventArgs)
+    Protected Friend Sub OnChanged( sender As Object,  e As EventArgs)
         Sort()
         RaiseEvent Changed(sender, e)
     End Sub
@@ -1147,7 +1147,7 @@ End Class
         Get
             Return mName
         End Get
-        Set(ByVal Value As String)
+        Set( Value As String)
             mName = Value
         End Set
     End Property
@@ -1156,7 +1156,7 @@ End Class
         Get
             Return Text_
         End Get
-        Set(ByVal Value As String)
+        Set( Value As String)
             Text_ = Value
         End Set
     End Property
@@ -1165,7 +1165,7 @@ End Class
         Get
             Return mForeColor
         End Get
-        Set(ByVal Value As Color)
+        Set( Value As Color)
             mForeColor = Value
         End Set
     End Property
@@ -1174,7 +1174,7 @@ End Class
         Get
             Return mTag
         End Get
-        Set(ByVal Value As Object)
+        Set( Value As Object)
             mTag = Value
         End Set
     End Property
@@ -1183,7 +1183,7 @@ End Class
         Get
             Return mImage
         End Get
-        Set(ByVal Value As Image)
+        Set( Value As Image)
             mImage = Value
         End Set
     End Property
@@ -1198,7 +1198,7 @@ End Class
         Get
             Return mSelected
         End Get
-        Set(ByVal Value As Boolean)
+        Set( Value As Boolean)
             If mSelected <> Value Then
                 Dim BranchBounds As Rectangle = Bounds
                 If BranchBounds.Bottom >= Tree.Bounds.Bottom - If(Tree.HScroll.Visible, Tree.HScroll.Height, 0) Then Tree.VScroll.Value += 2 + BranchBounds.Height
@@ -1316,7 +1316,7 @@ End Class
         Parent_.Branches.Remove(Me)
     End Sub
 #End Region
-    Private Sub GetRowIndex(ByVal Branches As BranchCollection)
+    Private Sub GetRowIndex( Branches As BranchCollection)
         For Each N As Branch In Branches
             If N.Visible Then
                 N.RowIndex = RelativeIndex
@@ -1326,8 +1326,8 @@ End Class
         Next
     End Sub
 #Region " Events "
-    Public Event Changed(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnChanged(ByVal sender As Object, ByVal e As EventArgs)
+    Public Event Changed( sender As Object,  e As EventArgs)
+    Protected Friend Sub OnChanged( sender As Object,  e As EventArgs)
         RaiseEvent Changed(sender, e)
     End Sub
 #End Region
@@ -1338,7 +1338,7 @@ End Class
 <Serializable()> Public Class ItemCollection
     Inherits CollectionBase
 #Region " Constructor "
-    Public Sub New(ByVal Tree As HeaderTreeView, Optional ByVal Branch As Branch = Nothing, Optional ByVal ImageList As ImageList = Nothing)
+    Public Sub New( Tree As HeaderTreeView, Optional  Branch As Branch = Nothing, Optional  ImageList As ImageList = Nothing)
         mTree = Tree
         mOwner = Branch
         mImageList = ImageList
@@ -1363,24 +1363,24 @@ End Class
             Return mImageList
         End Get
     End Property
-    Default Property Item(ByVal Index As Integer) As Item
+    Default Property Item( Index As Integer) As Item
         Get
             Return CType(List(Index), Item)
         End Get
-        Set(ByVal Value As Item)
+        Set( Value As Item)
             List(Index) = Value
         End Set
     End Property
 #End Region
 #Region " Methods "
-    Public Function Add(ByVal Value As Item) As Integer
+    Public Function Add( Value As Item) As Integer
         Dim Result As Integer
         Result = List.Add(Value)
         'AddHandler Value.MouseDown, AddressOf OnMouseDown
         OnChanged(Me, New EventArgs)
         Return Result
     End Function
-    Public Function Add(ByVal Text As String, Optional ByVal ForeColor As Color = Nothing, Optional ByVal Image As Image = Nothing) As Item
+    Public Function Add( Text As String, Optional  ForeColor As Color = Nothing, Optional  Image As Image = Nothing) As Item
         Dim Result As New Item(mOwner)
         Result.Text = Text
         Result.ForeColor = ForeColor
@@ -1388,18 +1388,18 @@ End Class
         Add(Result)
         Return Result
     End Function
-    Public Function IndexOf(ByVal Value As Item) As Integer
+    Public Function IndexOf( Value As Item) As Integer
         Return List.IndexOf(Value)
     End Function
-    Public Sub Insert(ByVal index As Integer, ByVal Value As Item)
+    Public Sub Insert( index As Integer,  Value As Item)
         List.Insert(index, Value)
         OnChanged(Me, New EventArgs)
     End Sub
-    Public Sub Remove(ByVal Value As Item)
+    Public Sub Remove( Value As Item)
         List.Remove(Value)
         OnChanged(Me, New EventArgs)
     End Sub
-    Public Function Contains(ByVal Value As Item) As Boolean
+    Public Function Contains( Value As Item) As Boolean
         Return List.Contains(Value)
     End Function
     Public Shadows Sub Clear()
@@ -1408,15 +1408,15 @@ End Class
     End Sub
 #End Region
 #Region " Events "
-    Public Event Changed(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnChanged(ByVal sender As Object, ByVal e As EventArgs)
+    Public Event Changed( sender As Object,  e As EventArgs)
+    Protected Friend Sub OnChanged( sender As Object,  e As EventArgs)
         RaiseEvent Changed(sender, e)
     End Sub
 #End Region
 End Class
 Public Class Item
 #Region " Constructor "
-    Public Sub New(Optional ByVal Branch As Branch = Nothing, Optional ByVal ForeColor As Color = Nothing)
+    Public Sub New(Optional  Branch As Branch = Nothing, Optional  ForeColor As Color = Nothing)
         mTree = Branch.Tree
         mParent = Branch
     End Sub
@@ -1439,7 +1439,7 @@ Public Class Item
         Get
             Return mImage
         End Get
-        Set(ByVal Value As Image)
+        Set( Value As Image)
             mImage = Value
         End Set
     End Property
@@ -1448,7 +1448,7 @@ Public Class Item
         Get
             Return Text_
         End Get
-        Set(ByVal Value As String)
+        Set( Value As String)
             Text_ = Value
         End Set
     End Property
@@ -1457,7 +1457,7 @@ Public Class Item
         Get
             Return (mAlignment)
         End Get
-        Set(ByVal Value As HorizontalAlignment)
+        Set( Value As HorizontalAlignment)
             mAlignment = Value
         End Set
     End Property
@@ -1466,7 +1466,7 @@ Public Class Item
         Get
             Return mForeColor
         End Get
-        Set(ByVal Value As Color)
+        Set( Value As Color)
             mForeColor = Value
         End Set
     End Property
@@ -1475,7 +1475,7 @@ Public Class Item
         Get
             Return mTag
         End Get
-        Set(ByVal Value As Object)
+        Set( Value As Object)
             mTag = Value
         End Set
     End Property
@@ -1484,7 +1484,7 @@ Public Class Item
         Get
             Return mSelected
         End Get
-        Set(ByVal Value As Boolean)
+        Set( Value As Boolean)
             If Tree.FullRowSelect Then
                 Parent.Selected = Not (Parent.Selected)
             Else
@@ -1596,7 +1596,7 @@ Public MustInherit Class Headers
         Get
             Return mHeadersVisible
         End Get
-        Set(ByVal Value As Boolean)
+        Set( Value As Boolean)
             mHeadersVisible = Value
         End Set
     End Property
@@ -1615,7 +1615,7 @@ Public MustInherit Class Headers
         Get
             Return mSelectedColor
         End Get
-        Set(ByVal Value As Color)
+        Set( Value As Color)
             If (Not (mSelectedColor.Equals(Value))) Then
                 mSelectedColor = Value
                 Invalidate()
@@ -1627,7 +1627,7 @@ Public MustInherit Class Headers
         Get
             Return mBackColor
         End Get
-        Set(ByVal Value As Color)
+        Set( Value As Color)
             If (Not (mBackColor.Equals(Value))) Then
                 mBackColor = Value
                 Invalidate()
@@ -1639,7 +1639,7 @@ Public MustInherit Class Headers
         Get
             Return mHeaderForeColor
         End Get
-        Set(ByVal Value As Color)
+        Set( Value As Color)
             If (Not (mHeaderForeColor.Equals(Value))) Then
                 mHeaderForeColor = Value
                 Invalidate()
@@ -1651,7 +1651,7 @@ Public MustInherit Class Headers
         Get
             Return mHeaderBackColor
         End Get
-        Set(ByVal Value As Color)
+        Set( Value As Color)
             If (Not (mHeaderBackColor.Equals(Value))) Then
                 mHeaderBackColor = Value
                 Invalidate()
@@ -1663,7 +1663,7 @@ Public MustInherit Class Headers
         Get
             Return mHeaderHatchColor
         End Get
-        Set(ByVal Value As Color)
+        Set( Value As Color)
             If (Not (mHeaderHatchColor.Equals(Value))) Then
                 mHeaderHatchColor = Value
                 Invalidate()
@@ -1675,7 +1675,7 @@ Public MustInherit Class Headers
         Get
             Return mHeaderHatchStyle
         End Get
-        Set(ByVal Value As HatchStyle)
+        Set( Value As HatchStyle)
             If (Not (mHeaderHatchStyle.Equals(Value))) Then
                 mHeaderHatchStyle = Value
                 Invalidate()
@@ -1703,20 +1703,20 @@ Public MustInherit Class Headers
         Get
             Return mTotalHeight
         End Get
-        Set(ByVal Value As Integer)
+        Set( Value As Integer)
             mTotalHeight = Value
         End Set
     End Property
 #End Region
 #Region " Events "
-    Public Event ScrollChange(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnScrollChange(ByVal sender As Object, ByVal e As EventArgs)
+    Public Event ScrollChange( sender As Object,  e As EventArgs)
+    Protected Friend Sub OnScrollChange( sender As Object,  e As EventArgs)
         Invalidate()
         RaiseEvent ScrollChange(sender, e)
         OnHeadersChanged(sender, e)
     End Sub
-    Public Event HeadersChanged(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnHeadersChanged(ByVal sender As Object, ByVal e As EventArgs)
+    Public Event HeadersChanged( sender As Object,  e As EventArgs)
+    Protected Friend Sub OnHeadersChanged( sender As Object,  e As EventArgs)
         Invalidate()
         RaiseEvent HeadersChanged(sender, e)
         Dim PrevColWidths As Integer = 1
@@ -1725,8 +1725,8 @@ Public MustInherit Class Headers
             PrevColWidths += Header.Width
         Next
     End Sub
-    Public Event HeadersClicked(ByVal sender As Header)
-    Protected Friend Sub OnHeadersClicked(ByVal sender As Header)
+    Public Event HeadersClicked( sender As Header)
+    Protected Friend Sub OnHeadersClicked( sender As Header)
         Dim CTvw As HeaderTreeView = CType(Me, HeaderTreeView)
         If CTvw.SortType = SortType.IndexAscending Then
             CTvw.SortType = SortType.IndexDescending
@@ -1749,7 +1749,7 @@ Public MustInherit Class Headers
         AllowPaint = True
         Invalidate()
     End Sub
-    Protected Overrides Sub OnPaint(ByVal e As PaintEventArgs)
+    Protected Overrides Sub OnPaint( e As PaintEventArgs)
         If Not AllowPaint Then Exit Sub
         Dim Graphics As Graphics = e.Graphics
         Dim Rectangle As Rectangle = ClientRectangle
@@ -1759,7 +1759,7 @@ Public MustInherit Class Headers
         DrawHeaders(Graphics, Rectangle)
         DrawBorder(Graphics, Rectangle)
     End Sub
-    Private Sub SetupScrolls(ByVal r As Rectangle, ByVal TotalHeight As Integer)
+    Private Sub SetupScrolls( r As Rectangle,  TotalHeight As Integer)
         Dim HVis As Boolean = HScroll.Visible
         Dim VVis As Boolean = VScroll.Visible
         If HScroll.Visible Then
@@ -1805,11 +1805,11 @@ Public MustInherit Class Headers
             Invalidate()
         End If
     End Sub
-    Private Sub DrawBackground(ByVal g As Graphics, ByVal r As Rectangle)
+    Private Sub DrawBackground( g As Graphics,  r As Rectangle)
         g.FillRectangle(New SolidBrush(mBackColor), r)
     End Sub
-    Protected MustOverride Sub DrawItems(ByVal g As Graphics, ByVal r As Rectangle)
-    Private Sub DrawHeaders(ByVal g As Graphics, ByVal r As Rectangle)
+    Protected MustOverride Sub DrawItems( g As Graphics,  r As Rectangle)
+    Private Sub DrawHeaders( g As Graphics,  r As Rectangle)
         If HeadersVisible Then
             Dim CTvw As HeaderTreeView = DirectCast(Me, HeaderTreeView)
             Dim Ascending As String = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAM9JREFUOE/N0kkKg0AQBdCf+x/KlaALxXkeF04o4g0qXU1sDPQqBhLhI72o17+gH0SEWx8Dd3JrWLa/c/t3Ac/ziOM4Dtm2LWNZFpmmKWMYhsq1tVphmiYw0Pc9tW1LVVVRnueUpilFUURBEEjAdd23tdVhWRZckaZpqCxLiSRJIocFwpfogW3bwMg4juDqXdfRifCwQCCawPd9PbDvO9Z1VQgPMcJ/0QRZloGRMAz1wHEcOJF5njEMA14I6rpGURQSieNYD3z6Hv7oIf1shSf3G9UMQ+Vu/QAAAABJRU5ErkJggg=="
@@ -1849,7 +1849,7 @@ Public MustInherit Class Headers
             End If
         End If
     End Sub
-    Private Sub DrawBorder(ByVal g As Graphics, ByVal r As Rectangle)
+    Private Sub DrawBorder( g As Graphics,  r As Rectangle)
         ControlPaint.DrawBorder3D(g, r, Border3DStyle.Sunken)
         If VScroll.Visible AndAlso HScroll.Visible Then g.FillRectangle(SystemBrushes.Control, VScroll.Left, HScroll.Top, VScroll.Width, HScroll.Height)
     End Sub
@@ -1863,7 +1863,7 @@ Public MustInherit Class Headers
     Private ColStartDrag As Integer
     Private OrigColWidth As Integer
     Private ReadOnly ToolTip As ToolTip = New ToolTip
-    Protected Overrides Sub OnMouseMove(ByVal e As MouseEventArgs)
+    Protected Overrides Sub OnMouseMove( e As MouseEventArgs)
         MyBase.OnMouseMove(e)
         If e.Button = MouseButtons.Left AndAlso ColSizeHover AndAlso Not IsNothing(TheHeader) Then
             If e.X < TheHeader.Bounds.Left + 4 Then Exit Sub
@@ -1887,7 +1887,7 @@ Public MustInherit Class Headers
             Next
         End If
     End Sub
-    Protected Overrides Sub OnMouseDown(ByVal e As MouseEventArgs)
+    Protected Overrides Sub OnMouseDown( e As MouseEventArgs)
         MyBase.OnMouseDown(e)
         If HeadersVisible Then
             If e.Y <= HeaderHeight Then
@@ -1906,7 +1906,7 @@ Public MustInherit Class Headers
             End If
         End If
     End Sub
-    Protected Overrides Sub OnMouseUp(ByVal e As MouseEventArgs)
+    Protected Overrides Sub OnMouseUp( e As MouseEventArgs)
         MyBase.OnMouseUp(e)
         If e.Button = MouseButtons.Left Then
             ' ColSizing = e.X
@@ -1914,11 +1914,11 @@ Public MustInherit Class Headers
             ToolTip.Hide(Me)
         End If
     End Sub
-    Protected Overrides Sub OnFontChanged(ByVal e As System.EventArgs)
+    Protected Overrides Sub OnFontChanged( e As System.EventArgs)
         MyBase.OnFontChanged(e)
         Invalidate()
     End Sub
-    Protected Overrides Sub OnMouseWheel(ByVal e As MouseEventArgs)
+    Protected Overrides Sub OnMouseWheel( e As MouseEventArgs)
         MyBase.OnMouseWheel(e)
         If VScroll.Visible Then
             If ((VScroll.Value + -e.Delta) <= (VScroll.Maximum - VScroll.LargeChange)) AndAlso
@@ -1942,7 +1942,7 @@ End Class
 #Region " Header Classes "
 <Serializable()> Public Class HeaderCollection
     Inherits List(Of Header)
-    Public Shadows Function AddRange(ByVal Headers As Header()) As Header()
+    Public Shadows Function AddRange( Headers As Header()) As Header()
 
         For Each Header In Headers
             Add(Header)
@@ -1958,7 +1958,7 @@ End Class
         Return addHeader
 
     End Function
-    Public Shadows Function Add(ByVal Text As String) As Header
+    Public Shadows Function Add( Text As String) As Header
 
         Dim addHeader As New Header(Text) With {
             .Width = 100
@@ -1967,7 +1967,7 @@ End Class
         Return addHeader
 
     End Function
-    Public Shadows Function Add(ByVal Text As String, ByVal Width As Integer) As Header
+    Public Shadows Function Add( Text As String,  Width As Integer) As Header
 
         Dim Header As New Header(Text) With {
             .Text = Text,
@@ -1977,24 +1977,24 @@ End Class
         Return Header
 
     End Function
-    Public Shadows Sub Insert(ByVal index As Integer, ByVal insertHeader As Header)
+    Public Shadows Sub Insert( index As Integer,  insertHeader As Header)
 
         MyBase.Insert(index, insertHeader)
         OnChanged(Me, New EventArgs)
 
     End Sub
-    Public Shadows Sub Remove(ByVal removeHeader As Header)
+    Public Shadows Sub Remove( removeHeader As Header)
 
         MyBase.Remove(removeHeader)
         OnChanged(Me, New EventArgs)
 
     End Sub
-    Public Event Changed(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnChanged(ByVal sender As Object, ByVal e As EventArgs)
+    Public Event Changed( sender As Object,  e As EventArgs)
+    Protected Friend Sub OnChanged( sender As Object,  e As EventArgs)
         RaiseEvent Changed(sender, e)
     End Sub
-    Public Event Clicked(ByVal sender As Header)
-    Protected Friend Sub OnClicked(ByVal sender As Header)
+    Public Event Clicked( sender As Header)
+    Protected Friend Sub OnClicked( sender As Header)
         RaiseEvent Clicked(sender)
     End Sub
 End Class
@@ -2008,7 +2008,7 @@ End Class
         Get
             Return mResizeable
         End Get
-        Set(ByVal Value As Boolean)
+        Set( Value As Boolean)
             mResizeable = Value
         End Set
     End Property
@@ -2017,7 +2017,7 @@ End Class
         Get
             Return ForeColor_
         End Get
-        Set(ByVal Value As Color)
+        Set( Value As Color)
             If ForeColor_ <> Value Then
                 ForeColor_ = Value
                 OnChanged(Me, New EventArgs)
@@ -2029,7 +2029,7 @@ End Class
         Get
             Return Text_
         End Get
-        Set(ByVal Value As String)
+        Set( Value As String)
             If Text_ <> Value Then
                 Text_ = Value
                 OnChanged(Me, New EventArgs)
@@ -2041,7 +2041,7 @@ End Class
         Get
             Return mAlignment
         End Get
-        Set(ByVal Value As HorizontalAlignment)
+        Set( Value As HorizontalAlignment)
             If mAlignment <> Value Then
                 mAlignment = Value
                 OnChanged(Me, New EventArgs)
@@ -2053,7 +2053,7 @@ End Class
         Get
             Return mWidth
         End Get
-        Set(ByVal Value As Integer)
+        Set( Value As Integer)
             If mWidth <> Value Then
                 mWidth = Value
                 OnChanged(Me, New EventArgs)
@@ -2065,7 +2065,7 @@ End Class
         Get
             Return mImage
         End Get
-        Set(ByVal Value As Image)
+        Set( Value As Image)
             If mImage IsNot Value Then
                 mImage = Value
                 OnChanged(Me, New EventArgs)
@@ -2077,19 +2077,19 @@ End Class
         Get
             Return mBounds
         End Get
-        Set(ByVal Value As Rectangle)
+        Set( Value As Rectangle)
             If mBounds <> Value Then
                 mBounds = Value
                 OnChanged(Me, New EventArgs)
             End If
         End Set
     End Property
-    Public Event Changed(ByVal sender As Object, ByVal e As EventArgs)
-    Protected Friend Sub OnChanged(ByVal sender As Object, ByVal e As EventArgs)
+    Public Event Changed( sender As Object,  e As EventArgs)
+    Protected Friend Sub OnChanged( sender As Object,  e As EventArgs)
         RaiseEvent Changed(sender, e)
     End Sub
-    Public Event Clicked(ByVal sender As Header)
-    Protected Friend Sub OnClicked(ByVal sender As Header)
+    Public Event Clicked( sender As Header)
+    Protected Friend Sub OnClicked( sender As Header)
         RaiseEvent Clicked(sender)
     End Sub
 End Class

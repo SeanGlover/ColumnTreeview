@@ -834,10 +834,6 @@ Public Class TreeViewer
                     Dim columnHeads As New ColumnHeadCollection(columnNames.ToArray)
                     With ColumnHeaders
                         .Clear()
-                        If Table.TableName = "xyz" Then
-                            columnHeads.Styles.Height = 99
-
-                        End If
                         If columnNames.Any Then .Add(columnHeads)
                         If ColumnHeaders.Any Then RecursiveBuild(Ancestors, 0, Table)
                     End With
@@ -870,6 +866,7 @@ Public Class TreeViewer
                     .HeaderLevel_ = lvl
                     .IsHeader_ = True
                     .ColumnIndex_ = 0
+                    .DataType_ = tbl.Columns(0).DataType
                     .Header_ = headers(.ColumnIndex)
                     .Font = Font
                     .Row_ = firstRow
@@ -886,6 +883,7 @@ Public Class TreeViewer
                                                      .HeaderLevel_ = lvl
                                                      .IsFieldParent_ = True
                                                      .ColumnIndex_ = 1
+                                                     .DataType_ = tbl.Columns(1).DataType
                                                      .Header_ = headers(.ColumnIndex)
                                                      .DataType_ = GetType(String)
                                                      .IsField_ = False
@@ -900,6 +898,7 @@ Public Class TreeViewer
                                                                         With fieldNode
                                                                             .HeaderLevel_ = lvl
                                                                             .ColumnIndex_ = columnIndex
+                                                                            .DataType_ = tbl.Columns(columnIndex).DataType
                                                                             .Header_ = headers(.ColumnIndex)
                                                                             .IsField_ = True
                                                                             .Font = Font
@@ -1704,6 +1703,7 @@ Public Class TreeViewer
                                                         End Using
                                                         e.Graphics.DrawRectangle(Pens.Black, selectionBounds)
                                                     End If
+                                                    'If .Header.Name.ToLowerInvariant = "net" Then Stop
                                                 End If
                                             End With
                                         Next
@@ -1957,7 +1957,7 @@ Public Class TreeViewer
             End If
         End With
         With VScroll
-            Dim maxVscrollHeight As Integer = maxHeight - If(hScrollVisible, HScroll.Height, 0)
+            Dim maxVscrollHeight As Integer = {0, maxHeight - If(hScrollVisible, HScroll.Height, 0)}.Max
             .Minimum = 0
             .Maximum = {0, unboundedSize.Height + If(hScrollVisible, HScroll.Height, 0)}.Max
             .Visible = vscrollVisible
@@ -1997,6 +1997,7 @@ Public Class TreeViewer
                                           If .SortIcon Is Nothing Then
                                               widthProposed += { .ContentWidth, textWidth}.Max
                                               .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed, 0, 0, 0)
+                                              'If .Name.ToLowerInvariant = "net" Then Stop
                                           Else
                                               widthProposed += If(.ContentWidth - textWidth > .SortIcon.Width, .ContentWidth, textWidth + 2 + .SortIcon.Width + 2)
                                               .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed - .SortIcon.Width, CInt((headers.Height - .SortIcon.Height) / 2), .SortIcon.Width, .SortIcon.Height)
@@ -2939,6 +2940,8 @@ Public Class Node
     Private Sub TextWidth_Set()
 
         _TextWidth = 3 + MeasureText(Text, Font).Width 'TextRenderer.MeasureText(If(Text, String.Empty), Font).Width 'MeasureText(Text, Font).Width
+        'Dim kvp = Column.Get_kvpFormat(DataType)
+        'If Text = "$282,800.00" Then Stop
         _Bounds_Text.Width = TextWidth
         RequiresRepaint()
 

@@ -367,7 +367,7 @@ Public Class TreeViewer
                     .Controls.Add(IC_NodeAdd, 0, 1)
                     .Controls.Add(IC_NodeRemove, 0, 2)
                 End With
-                TLP.SetSize(TLP_NodePermissions)
+                SetSize(TLP_NodePermissions)
                 .DropDownItems.Add(New ToolStripControlHost(TLP_NodePermissions))
                 IC_NodeEdit.Image = Base64ToImage(EditString)
                 IC_NodeEdit.DropDown.SelectionColor = Color.Transparent
@@ -437,7 +437,7 @@ Public Class TreeViewer
 
         With DirectCast(sender, ImageCombo)
             TLP_NodePermissions.ColumnStyles(0).Width = {200, .Image.Width + TextRenderer.MeasureText(.Text, .Font).Width + .Image.Width}.Max
-            TLP.SetSize(TLP_NodePermissions)
+            SetSize(TLP_NodePermissions)
         End With
 
     End Sub
@@ -1005,6 +1005,13 @@ Public Class TreeViewer
     End Property
     Public Property MouseOverExpandsNode As Boolean = False
     Public Property CanAdd As Boolean = True
+    Public ReadOnly Property ExpandState As CheckState
+        Get
+            Dim allNodes = Ancestors.All
+            Dim expanded = allNodes.Where(Function(n) n.Visible)
+            Return If(allNodes.Any, If(allNodes.Count = expanded.Count, CheckState.All, CheckState.Mixed), CheckState.None)
+        End Get
+    End Property
     Private MultiSelect_ As Boolean
     Public Property MultiSelect As Boolean
         Get

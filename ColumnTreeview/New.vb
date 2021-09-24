@@ -713,6 +713,18 @@ Public Class TreeViewer
     End Sub
 #End Region
 
+    Private ForegroundImage_ As Image
+    Public Property ForegroundImage As Image
+        Get
+            Return ForegroundImage_
+        End Get
+        Set(value As Image)
+            If Not SameImage(ForegroundImage_, value) Then
+                ForegroundImage_ = value
+                Invalidate()
+            End If
+        End Set
+    End Property
     Public Property FreezeRoot As Boolean = False
     Private ExpandBeforeText_ As Boolean = True
     Public Property ExpandBeforeText As Boolean
@@ -1855,6 +1867,12 @@ Public Class TreeViewer
                                                End With
                                            End Sub)
             End With
+            If ForegroundImage IsNot Nothing Then
+                Dim maxWidth = {ForegroundImage.Width, Width}.Min
+                Dim maxHeight = {ForegroundImage.Height, Height}.Min
+                Dim imageBounds As New Rectangle(CInt((Width - maxWidth) / 2), CInt((Height - maxHeight) / 2), maxWidth, maxHeight)
+                e.Graphics.DrawImage(ForegroundImage, imageBounds)
+            End If
             ControlPaint.DrawBorder3D(e.Graphics, ClientRectangle, Border3DStyle.Sunken)
         End If
 

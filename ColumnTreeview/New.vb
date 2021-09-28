@@ -1872,10 +1872,13 @@ Public Class TreeViewer
                                            End Sub)
             End With
             If ForegroundImage IsNot Nothing Then
-                Dim maxWidth = {ForegroundImage.Width, Width}.Min
-                Dim maxHeight = {ForegroundImage.Height, Height}.Min
-                Dim imageBounds As New Rectangle(CInt((Width - maxWidth) / 2), CInt((Height - maxHeight) / 2), maxWidth, maxHeight)
-                e.Graphics.DrawImage(ForegroundImage, imageBounds)
+                Try
+                    Dim maxWidth = {ForegroundImage.Width, Width}.Min
+                    Dim maxHeight = {ForegroundImage.Height, Height}.Min
+                    Dim imageBounds As New Rectangle(CInt((Width - maxWidth) / 2), CInt((Height - maxHeight) / 2), maxWidth, maxHeight)
+                    e.Graphics.DrawImage(ForegroundImage, imageBounds)
+                Catch ex As ArgumentException
+                End Try
             End If
             ControlPaint.DrawBorder3D(e.Graphics, ClientRectangle, Border3DStyle.Sunken)
         End If

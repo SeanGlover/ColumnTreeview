@@ -214,7 +214,7 @@ Public Class TreeViewer
         .Margin = New Padding(0)}
 #End Region
 
-    Private WithEvents FindAndReplace As New FindReplace With
+    Public WithEvents FindAndReplace As New FindReplace With
     {
         .Margin = New Padding(0),
         .BackgroundTheme = Theme.Gray
@@ -1345,8 +1345,13 @@ Public Class TreeViewer
 
         If ModifierKeys = Keys.Control Then
             If e.KeyCode = Keys.F Then
+                Dim allNodes As New List(Of Node)
+                For Each node In Ancestors.All
+                    allNodes.Add(node)
+                    If node.IsFieldParent Then allNodes.AddRange(node.Fields)
+                Next
                 With FindAndReplace
-                    .DataSource = Ancestors.All
+                    .DataSource = allNodes
                     .Show()
                     If SelectedNodes.Any Then .FindControl.Text = SelectedNodes.First.Text
                 End With
@@ -1361,66 +1366,66 @@ Public Class TreeViewer
             FindRequest(Nothing, New FindEventArgs(Nothing))
 
         ElseIf e.Zone.Name = Zone.Identifier.Close Then
-            For Each node As Node In Ancestors.All
+            For Each node As Node In DirectCast(FindAndReplace.DataSource, List(Of Node))
                 node.BackColor = Color.Transparent
             Next
 
         ElseIf e.Zone.Name = Zone.Identifier.GotoNext Then
             If FindAndReplace.CurrentMatch.Key >= 0 Then
                 Dim Match = FindAndReplace.CurrentMatch
-                Dim nodeTionary As New Dictionary(Of Integer, Node)
-                For Each node In Ancestors.All
-                    node.BackColor = Color.Transparent
-                    node._Selected = False
-                    nodeTionary.Add(node.IndexAll, node)
+                Dim indexAll As New Dictionary(Of Integer, Node)
+                For Each node In DirectCast(FindAndReplace.DataSource, List(Of Node))
+                    indexAll.Add(indexAll.Count, node)
                 Next
-                Dim nodeMatch = nodeTionary(Match.Key)
-                nodeMatch.BackColor = Color.Yellow
-                nodeMatch?.Parent.Expand()
+                For Each matchIndex In FindAndReplace.Matches
+                    Dim nodeMatch = indexAll(matchIndex.Key)
+                    nodeMatch.BackColor = If(Match.Key = matchIndex.Key, Color.Orange, Color.Yellow)
+                Next
                 RequiresRepaint()
 
             End If
 
         ElseIf e.Zone.Name = Zone.Identifier.ReplaceOne Then
             If FindAndReplace.CurrentMatch.Key >= 0 Then
-                Dim replacementText As String = FindAndReplace.ReplaceControl.Text
-                Dim lengthOfWordToInsert As Integer = replacementText.Length
-                Dim lengthOfWordToRemove As Integer = FindAndReplace.CurrentMatch.Value.Length
-                textSearch = textSearch.Remove(FindAndReplace.CurrentMatch.Key, lengthOfWordToRemove)
-                textSearch = textSearch.Insert(FindAndReplace.CurrentMatch.Key, replacementText)
-                Text = textSearch
-                FindRequest(Nothing, New FindEventArgs(Nothing))
+                'Dim replacementText As String = FindAndReplace.ReplaceControl.Text
+                'Dim lengthOfWordToInsert As Integer = replacementText.Length
+                'Dim lengthOfWordToRemove As Integer = FindAndReplace.CurrentMatch.Value.Length
+                'textSearch = textSearch.Remove(FindAndReplace.CurrentMatch.Key, lengthOfWordToRemove)
+                'textSearch = textSearch.Insert(FindAndReplace.CurrentMatch.Key, replacementText)
+                'Text = textSearch
+                'FindRequest(Nothing, New FindEventArgs(Nothing))
             End If
 
         ElseIf e.Zone.Name = Zone.Identifier.ReplaceAll Then
             If FindAndReplace.CurrentMatch.Key >= 0 Then
-                Dim replacementText As String = FindAndReplace.ReplaceControl.Text
-                Dim lengthOfWordToInsert As Integer = replacementText.Length
-                Dim ReverseOrderMatches = FindAndReplace.Matches.OrderByDescending(Function(x) x.Key)
-                For Each match In ReverseOrderMatches
-                    Dim lengthOfWordToRemove As Integer = match.Value.Length
-                    textSearch = textSearch.Remove(match.Key, lengthOfWordToRemove)
-                    textSearch = textSearch.Insert(match.Key, replacementText)
-                Next
-                If FindAndReplace.CurrentMatch.Key >= 0 Then
-                    Text = textSearch
-                    FindRequest(Nothing, New FindEventArgs(Nothing))
-                End If
+                'Dim replacementText As String = FindAndReplace.ReplaceControl.Text
+                'Dim lengthOfWordToInsert As Integer = replacementText.Length
+                'Dim ReverseOrderMatches = FindAndReplace.Matches.OrderByDescending(Function(x) x.Key)
+                'For Each match In ReverseOrderMatches
+                '    Dim lengthOfWordToRemove As Integer = match.Value.Length
+                '    textSearch = textSearch.Remove(match.Key, lengthOfWordToRemove)
+                '    textSearch = textSearch.Insert(match.Key, replacementText)
+                'Next
+                'If FindAndReplace.CurrentMatch.Key >= 0 Then
+                '    Text = textSearch
+                '    FindRequest(Nothing, New FindEventArgs(Nothing))
+                'End If
             End If
 
         End If
     End Sub
     Private Sub FindRequest(sender As Object, e As FindEventArgs)
 
-        Dim nodeTionary As New Dictionary(Of Integer, Node)
-        For Each node In Ancestors.All
+        Dim allNodes = DirectCast(FindAndReplace.DataSource, List(Of Node))
+        Dim IndexAll As New Dictionary(Of Integer, Node)
+        For Each node In allNodes
             node.BackColor = Color.Transparent
-            nodeTionary.Add(node.IndexAll, node)
+            IndexAll.Add(IndexAll.Count, node)
         Next
         For Each match In FindAndReplace.Matches
-            Dim node = nodeTionary(match.Key)
+            Dim node = IndexAll(match.Key)
             node.BackColor = Color.Yellow
-            node?.Parent.Expand()
+            node.Root.Expand()
         Next
         RequiresRepaint()
 
@@ -1692,9 +1697,9 @@ Public Class TreeViewer
                                                 boundsColumn = .Header.Bounds
                                                 ._Bounds_Text = New Rectangle(boundsColumn.Left, Node.Bounds_Text.Top, boundsColumn.Width - 1, Node.Bounds_Text.Height)
                                                 If .Bounds_Text.Right > 0 And .Bounds_Text.Left < Width Then
-                                                    Using Brush As New SolidBrush(If(DragData.DropHighlightNode Is fieldNode, DropHighlightColor, .BackColor))
+                                                    Using fieldBrush As New SolidBrush(If(DragData.DropHighlightNode Is fieldNode, DropHighlightColor, .BackColor))
                                                         'boundsNode.Inflate(-1, -1)
-                                                        e.Graphics.FillRectangle(Brush, boundsNode)
+                                                        e.Graphics.FillRectangle(fieldBrush, .Bounds_Text)
                                                     End Using
                                                     Using textBrush As New SolidBrush(.ForeColor)
                                                         Using sf As New StringFormat With {
@@ -1722,7 +1727,6 @@ Public Class TreeViewer
                                                         End Using
                                                         e.Graphics.DrawRectangle(Pens.Black, selectionBounds)
                                                     End If
-                                                    'If .Header.Name.ToLowerInvariant = "net" Then Stop
                                                 End If
                                             End With
                                         Next
@@ -2311,6 +2315,7 @@ Public Class TreeViewer
             ExpandCollapseNodes(Ancestors, True)
             Ancestors.First.Expand()
         End If
+        Invalidate()
 
     End Sub
     Public Sub CollapseNodes()
@@ -2319,6 +2324,7 @@ Public Class TreeViewer
             ExpandCollapseNodes(Ancestors, False)
             Ancestors.First.Collapse()
         End If
+        Invalidate()
 
     End Sub
     Private Sub ExpandCollapseNodes(Nodes As NodeCollection, State As Boolean)
@@ -2911,14 +2917,16 @@ Public Class Node
             Return checkCount > 0 And checkCount < checks.Count
         End Get
     End Property
-    Private _Image As Image
+    Private Image_ As Image
     Public Property Image As Image
         Get
-            Return _Image
+            Return Image_
         End Get
         Set(value As Image)
-            _Image = value
-            RequiresRepaint()
+            If Not SameImage(value, Image_) Then
+                Image_ = value
+                RequiresRepaint()
+            End If
         End Set
     End Property
     Public Property CanEdit As Boolean = True
@@ -2971,14 +2979,14 @@ Public Class Node
         RequiresRepaint()
 
     End Sub 'Only changes to Font & Text affect the width
-    Private _Text As String
+    Private Text_ As String
     Public Property Text As String
         Get
-            Return _Text & If(ShowNodeIndex, " [" & Index.ToString(InvariantCulture) & "]", String.Empty)
+            Return Text_ & If(ShowNodeIndex, " [" & Index.ToString(InvariantCulture) & "]", String.Empty)
         End Get
         Set(value As String)
-            If Not _Text = value Then
-                _Text = Replace(value, "&", "&&")
+            If Not Text_ = value Then
+                Text_ = Replace(value, "&", "&&")
                 TextWidth_Set()
             End If
         End Set
@@ -3009,34 +3017,40 @@ Public Class Node
             End If
         End Set
     End Property
-    Private _ForeColor As Color = Color.Black
+    Private ForeColor_ As Color = Color.Black
     Public Property ForeColor As Color
         Get
-            Return _ForeColor
+            Return ForeColor_
         End Get
         Set(value As Color)
-            _ForeColor = value
-            RequiresRepaint()
+            If value <> ForeColor_ Then
+                ForeColor_ = value
+                RequiresRepaint()
+            End If
         End Set
     End Property
-    Private _TextBackColor As Color = Color.Transparent
+    Private TextBackColor_ As Color = Color.Transparent
     Public Property TextBackColor As Color
         Get
-            Return _TextBackColor
+            Return TextBackColor_
         End Get
         Set(value As Color)
-            _TextBackColor = value
-            RequiresRepaint()
+            If value <> TextBackColor_ Then
+                TextBackColor_ = value
+                RequiresRepaint()
+            End If
         End Set
     End Property
-    Private _BackColor As Color = Color.Transparent
+    Private BackColor_ As Color = Color.Transparent
     Public Property BackColor As Color
         Get
-            Return _BackColor
+            Return BackColor_
         End Get
         Set(value As Color)
-            _BackColor = value
-            RequiresRepaint()
+            If value <> BackColor_ Then
+                BackColor_ = value
+                RequiresRepaint()
+            End If
         End Set
     End Property
     Friend _Selected As Boolean

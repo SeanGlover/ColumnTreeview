@@ -1859,13 +1859,19 @@ Public Class TreeViewer
                                                        e.Graphics.DrawImage(.SortIcon, boundsSort)
                                                    End If
                                                    Using headerTextBrush As New SolidBrush(drawStyle.ForeColor)
-                                                       e.Graphics.DrawString(
-                                                      .Text,
-                                                      drawStyle.Font,
-                                                      headerTextBrush,
-                                                      .Bounds_Text,
-                                                      drawStyle.Alignment
-                                                  )
+                                                       Dim align = drawStyle.Alignment.ToString()
+                                                       Using sf As New StringFormat With
+                                                       {
+                                                            .Alignment = If(align.EndsWith("Left"), StringAlignment.Near, If(align.EndsWith("Right"), StringAlignment.Far, StringAlignment.Center)),
+                                                            .LineAlignment = If(align.EndsWith("Top"), StringAlignment.Near, If(align.EndsWith("Bottom"), StringAlignment.Far, StringAlignment.Center))
+                                                       }
+                                                           e.Graphics.DrawString(
+                                                          .Text,
+                                                          drawStyle.Font,
+                                                          headerTextBrush,
+                                                          .Bounds_Text,
+                                                          sf)
+                                                       End Using
                                                    End Using
                                                    ControlPaint.DrawBorder3D(e.Graphics, .Bounds, Border3DStyle.Raised)
                                                End With

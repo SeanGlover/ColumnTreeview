@@ -798,7 +798,9 @@ Public Class TreeViewer
                 BindingSource.DataSource = value
 #Region " FILL TABLE "
                 If DataSource Is Nothing Then
-                    Exit Property
+                    Table_ = Nothing
+                    ColumnHeaders.Clear()
+                    Ancestors.Clear()
 
                 ElseIf TypeOf DataSource Is String Then
                     Exit Property

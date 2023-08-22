@@ -904,6 +904,9 @@ Public Class TreeViewer
                                                      .Font = Font
                                                      .Row_ = row
                                                      .Value = row(groupBy)
+                                                     '// fieldParent as Checkbox + Checked?
+                                                     '.CheckBox = True
+                                                     '.Checked = True
                                                  End With
                                                  subHeaders.RemoveAt(0)
                                                  Dim columnIndex As Byte = 2
@@ -1070,6 +1073,11 @@ Public Class TreeViewer
         Set(value As String)
             If value IsNot Nothing And Table IsNot Nothing AndAlso Table.Columns.Contains(value) Then
                 Dim tempTable = Table.Copy
+                Dim frmrGrpBy = tempTable.Columns(0).ColumnName
+                Dim newGrpBy = value
+                '// 1 to 1 relation of node --> row
+                Dim oldFieldParents = Get_nodeRows()
+
                 DataSource = Nothing
                 Ancestors.Clear()
                 tempTable.Columns(value).SetOrdinal(0)
@@ -1083,9 +1091,51 @@ Public Class TreeViewer
                                                        End Sub)
                                           End With
                                       End Sub)
+
+                '// get a before & after snapshot
+                Dim newFieldParents = Get_nodeRows()
+                Dim matches = New List(Of String)
+                For Each oldFieldRow In oldFieldParents.Item1
+                    Dim oldNode = oldFieldRow.Key
+                    Dim oldCells = oldFieldRow.Value
+                    Dim oldRwStr = String.Join("|", oldCells.Values)
+
+                    For Each newFieldRow In newFieldParents.Item1
+                        Dim newNode = newFieldRow.Key
+                        Dim newCells = newFieldRow.Value
+                        Dim newRwStr = String.Join("|", newCells.Values)
+                        If oldRwStr = newRwStr Then
+                            matches.Add(oldRwStr)
+                            newNode.CheckBox = oldNode.CheckBox
+                            newNode.Checked = oldNode.Checked
+                        End If
+                    Next
+                Next
             End If
         End Set
     End Property
+    Private Function Get_nodeRows() As Tuple(Of Dictionary(Of Node, Dictionary(Of String, String)), List(Of String))
+
+        Dim cols = New List(Of DataColumn)((From c In Table.Columns Select DirectCast(c, DataColumn)).OrderBy(Function(c) c.ColumnName))
+        Dim fieldParents = New List(Of Node)(Ancestors.All.Where(Function(n) n.IsFieldParent))
+        Dim nodeRows = New Dictionary(Of Node, Dictionary(Of String, String))
+        Dim fieldRows As New List(Of String)
+        For Each node In fieldParents.ToArray()
+            nodeRows(node) = New Dictionary(Of String, String)()
+            Dim nodeRow = node.Row
+            Dim nodeCells As New List(Of String)
+            For Each col In cols
+                Dim nodecell = nodeRow(col.ColumnName)
+                Dim nodeCellStr = If(DBNull.Value.Equals(nodecell) Or nodecell Is Nothing, String.Empty, nodecell.ToString())
+                nodeCells.Add(nodeCellStr)
+                nodeRows(node).Add(col.ColumnName, nodeCellStr)
+            Next
+            fieldRows.Add(String.Join("|", nodeCells))
+            fieldParents.Remove(node)
+        Next
+        Return Tuple.Create(nodeRows, fieldRows)
+
+    End Function
     Public Property MaxNodes As Integer
     Public Property LineStyle As DashStyle = DashStyle.Dot
     Public Property LineColor As Color = Color.Blue
@@ -1924,100 +1974,104 @@ Public Class TreeViewer
     End Property
     Friend Sub RequiresRepaint()
 
-        IgnoreSizeChanged = True
-        REM /// RESET INDEX / HEIGHT
-        NodeIndex = 0
-        VisibleIndex = 0
-        RollingWidth = Offset.X
-        RollingHeight = Offset.Y + ColumnHeaders.Sum(Function(h) h.Height)
+        Try
+            IgnoreSizeChanged = True
+            REM /// RESET INDEX / HEIGHT
+            NodeIndex = 0
+            VisibleIndex = 0
+            RollingWidth = Offset.X
+            RollingHeight = Offset.Y + ColumnHeaders.Sum(Function(h) h.Height)
 
-        REM /// ITERATE ALL NODES CHANGING BOUNDS
-        RefreshNodesBounds_Lines(Ancestors)
-        Columns_SetBounds() 'Must be done here to ensure initial view of H/V Scrolls is accurate
+            REM /// ITERATE ALL NODES CHANGING BOUNDS
+            RefreshNodesBounds_Lines(Ancestors)
+            Columns_SetBounds() 'Must be done here to ensure initial view of H/V Scrolls is accurate
 
-        REM /// TOTAL SIZE + RESIZE THE CONTROL IF AUTOSIZE
+            REM /// TOTAL SIZE + RESIZE THE CONTROL IF AUTOSIZE
 #Region " DETERMINE THE MAXIMUM POSSIBLE SIZE OF THE CONTROL AND COMPARE TO THE UNRESTRICTED SIZE "
-        Dim screenLocation As Point = PointToScreen(New Point(0, 0))
-        Dim wa As Size = WorkingArea.Size
-        Dim maxScreenSize As New Size(wa.Width - screenLocation.X, wa.Height - screenLocation.Y)
-        Dim maxParentSize As New Size
-        Dim maxUserSize As Size = MaximumSize
-        Dim unboundedSize As Size = UnRestrictedSize 'This is strictly the space size required to fit all node text ( does NOT include ScrollBars )
+            Dim screenLocation As Point = PointToScreen(New Point(0, 0))
+            Dim wa As Size = WorkingArea.Size
+            Dim maxScreenSize As New Size(wa.Width - screenLocation.X, wa.Height - screenLocation.Y)
+            Dim maxParentSize As New Size
+            Dim maxUserSize As Size = MaximumSize
+            Dim unboundedSize As Size = UnRestrictedSize 'This is strictly the space size required to fit all node text ( does NOT include ScrollBars )
 #Region " DETERMINE IF A PARENT RESTRICTS THE SIZE OF THE TREEVIEWER - LOOK FOR <.AutoSize> IN PARENT CONTROL PROPERTIES "
-        If Parent IsNot Nothing Then
-            Dim controlType As Type = Parent.GetType
-            Dim properties As Reflection.PropertyInfo() = controlType.GetProperties
-            Dim growParent As Boolean = False
-            For Each controlProperty In properties
-                If controlProperty.Name = "AutoSize" Then
-                    Dim propertyValue As Boolean = DirectCast(controlProperty.GetValue(Parent), Boolean)
-                    If propertyValue Then growParent = True
-                    Exit For
+            If Parent IsNot Nothing Then
+                Dim controlType As Type = Parent.GetType
+                Dim properties As Reflection.PropertyInfo() = controlType.GetProperties
+                Dim growParent As Boolean = False
+                For Each controlProperty In properties
+                    If controlProperty.Name = "AutoSize" Then
+                        Dim propertyValue As Boolean = DirectCast(controlProperty.GetValue(Parent), Boolean)
+                        If propertyValue Then growParent = True
+                        Exit For
+                    End If
+                Next
+                If Not growParent Then maxParentSize = New Size(Parent.Width, Parent.Height)
+                If Not Parent.MaximumSize.IsEmpty Then maxParentSize = Parent.MaximumSize
+            End If
+#End Region
+            Dim sizes As New List(Of Size) From {maxScreenSize, maxParentSize, maxUserSize}
+            Dim nonZeroWidths As New List(Of Integer)(From s In sizes Where s.Width > 0 Select s.Width)
+            Dim nonZeroHeights As New List(Of Integer)(From s In sizes Where s.Height > 0 Select s.Height)
+            Dim maxWidth As Integer = nonZeroWidths.Min
+            Dim maxHeight As Integer = nonZeroHeights.Min
+
+            Dim hScrollVisible As Boolean = unboundedSize.Width > maxWidth
+            Dim vscrollVisible As Boolean = unboundedSize.Height > maxHeight
+
+            If AutoSize Then 'Can resize
+                Dim proposedWidth = {unboundedSize.Width, maxWidth}.Min
+                Dim proposedHeight = {unboundedSize.Height, maxHeight}.Min
+                If hScrollVisible Then proposedHeight = {proposedHeight + HScroll.Height, maxHeight}.Min
+                If vscrollVisible Then proposedWidth = {proposedWidth + VScroll.Width, maxWidth}.Min
+                Width = proposedWidth
+                Height = proposedHeight
+                maxWidth = Width
+                maxHeight = Height
+            Else
+                maxWidth = {Width, maxWidth}.Min
+                maxHeight = {Height, maxHeight}.Min
+            End If
+            With HScroll
+                .Minimum = 0
+                .Maximum = {0, unboundedSize.Width + If(vscrollVisible, VScroll.Width, 0)}.Max
+                .Visible = hScrollVisible
+                .Left = 0
+                .Width = maxWidth
+                .Top = Height - .Height
+                .LargeChange = maxWidth
+                If .Visible Then
+                    .Show()
+                Else
+                    .Value = 0
+                    .Hide()
                 End If
-            Next
-            If Not growParent Then maxParentSize = New Size(Parent.Width, Parent.Height)
-            If Not Parent.MaximumSize.IsEmpty Then maxParentSize = Parent.MaximumSize
-        End If
+            End With
+            With VScroll
+                Dim maxVscrollHeight As Integer = {0, maxHeight - If(hScrollVisible, HScroll.Height, 0)}.Max
+                .Minimum = 0
+                .Maximum = {0, unboundedSize.Height + If(hScrollVisible, HScroll.Height, 0)}.Max
+                .Visible = vscrollVisible
+                .Left = maxWidth - VScrollWidth
+                .Height = maxVscrollHeight
+                .Top = 0
+                .LargeChange = maxVscrollHeight
+                If .Visible Then
+                    .Show()
+                Else
+                    .Value = 0
+                    .Hide()
+                End If
+            End With
 #End Region
-        Dim sizes As New List(Of Size) From {maxScreenSize, maxParentSize, maxUserSize}
-        Dim nonZeroWidths As New List(Of Integer)(From s In sizes Where s.Width > 0 Select s.Width)
-        Dim nonZeroHeights As New List(Of Integer)(From s In sizes Where s.Height > 0 Select s.Height)
-        Dim maxWidth As Integer = nonZeroWidths.Min
-        Dim maxHeight As Integer = nonZeroHeights.Min
+            DrawNodes_Set()
 
-        Dim hScrollVisible As Boolean = unboundedSize.Width > maxWidth
-        Dim vscrollVisible As Boolean = unboundedSize.Height > maxHeight
-
-        If AutoSize Then 'Can resize
-            Dim proposedWidth = {unboundedSize.Width, maxWidth}.Min
-            Dim proposedHeight = {unboundedSize.Height, maxHeight}.Min
-            If hScrollVisible Then proposedHeight = {proposedHeight + HScroll.Height, maxHeight}.Min
-            If vscrollVisible Then proposedWidth = {proposedWidth + VScroll.Width, maxWidth}.Min
-            Width = proposedWidth
-            Height = proposedHeight
-            maxWidth = Width
-            maxHeight = Height
-        Else
-            maxWidth = {Width, maxWidth}.Min
-            maxHeight = {Height, maxHeight}.Min
-        End If
-        With HScroll
-            .Minimum = 0
-            .Maximum = {0, unboundedSize.Width + If(vscrollVisible, VScroll.Width, 0)}.Max
-            .Visible = hScrollVisible
-            .Left = 0
-            .Width = maxWidth
-            .Top = Height - .Height
-            .LargeChange = maxWidth
-            If .Visible Then
-                .Show()
-            Else
-                .Value = 0
-                .Hide()
-            End If
-        End With
-        With VScroll
-            Dim maxVscrollHeight As Integer = {0, maxHeight - If(hScrollVisible, HScroll.Height, 0)}.Max
-            .Minimum = 0
-            .Maximum = {0, unboundedSize.Height + If(hScrollVisible, HScroll.Height, 0)}.Max
-            .Visible = vscrollVisible
-            .Left = maxWidth - VScrollWidth
-            .Height = maxVscrollHeight
-            .Top = 0
-            .LargeChange = maxVscrollHeight
-            If .Visible Then
-                .Show()
-            Else
-                .Value = 0
-                .Hide()
-            End If
-        End With
-#End Region
-        DrawNodes_Set()
-
-        REM /// FINALLY- REPAINT
-        Invalidate()
-        IgnoreSizeChanged = False
+            REM /// FINALLY- REPAINT
+            Invalidate()
+            IgnoreSizeChanged = False
+        Catch ex As ObjectDisposedException
+        Catch ex As Exception
+        End Try
 
     End Sub
     Private Sub Columns_SetBounds()
@@ -2607,12 +2661,18 @@ Public NotInheritable Class NodeCollection
         Return RemoveNode
 
     End Function
-    Public Shadows Function Item(Name As String) As Node
-
-        Dim Nodes As New List(Of Node)((From N In Me Where N.Name = Name).ToArray)
-        Return If(Nodes.Any, Nodes.First, Nothing)
-
-    End Function
+    Default Public Shadows ReadOnly Property Item(Name As String) As Node
+        Get
+            Dim nodesByName As New List(Of Node)((From N In Me Where N.Name.ToLower() = Name.ToLower()).ToArray)
+            Return If(nodesByName.Any(), nodesByName.First(), Nothing)
+        End Get
+    End Property
+    Default Public Shadows ReadOnly Property Item(index As Integer) As Node
+        Get
+            Dim nodesByName As New List(Of Node)((From N In Me Where N.Index = index).ToArray)
+            Return If(nodesByName.Any(), nodesByName.First(), Nothing)
+        End Get
+    End Property
     Public Shadows Function ItemByTag(TagObject As Object) As Node
 
         Dim Nodes As New List(Of Node)((From N In All Where N.Tag Is TagObject).ToArray)
@@ -3290,14 +3350,18 @@ Public Class Node
     Friend _Clicked As Boolean
     Private Sub RequiresRepaint()
 
-        If Not IsNothing(Tree) Then
-            If _Clicked Then
-                _Clicked = False
-                Tree.RequiresRepaint()
-            Else
-                Tree.NodeTimer_Start(Me)
+        Try
+            If Not IsNothing(Tree) Then
+                If _Clicked Then
+                    _Clicked = False
+                    Tree.RequiresRepaint()
+                Else
+                    Tree.NodeTimer_Start(Me)
+                End If
             End If
-        End If
+        Catch ex As ObjectDisposedException
+        Catch ex As Exception
+        End Try
 
     End Sub
     Public Sub Expand()
@@ -3728,13 +3792,18 @@ Public Class ColumnHeadCollection
         Return addHeader
 
     End Function
-    Public Shadows Function Item(headerName As String) As ColumnHead
-
-        Dim names As New List(Of ColumnHead)
-        names.AddRange(Where(Function(h) h.Name = headerName))
-        Return If(names.Any, names.First, Nothing)
-
-    End Function
+    Default Public Shadows ReadOnly Property Item(headerName As String) As ColumnHead
+        Get
+            Dim names As New List(Of ColumnHead)(Where(Function(h) h.Name.ToLower() = headerName.ToLower()))
+            Return If(names.Any(), names.First(), Nothing)
+        End Get
+    End Property
+    Default Public Shadows ReadOnly Property Item(headerIndex As Integer) As ColumnHead
+        Get
+            Dim names As New List(Of ColumnHead)(Where(Function(h) h.Index = headerIndex))
+            Return If(names.Any(), names.First(), Nothing)
+        End Get
+    End Property
     Public Shadows Sub Insert(index As Integer, insertHeader As ColumnHead)
 
         MyBase.Insert(index, insertHeader)

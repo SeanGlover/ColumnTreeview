@@ -74,7 +74,7 @@ Public Class HeaderTreeView
     Public Sub New()
         Size = New Size(400, 300)
         LoadImages()
-        AddHandler mBranches.Changed, AddressOf OnBranchesChanged
+        AddHandler Branches_.Changed, AddressOf OnBranchesChanged
         AddHandler SelectedBranches_.Changed, AddressOf OnSelectedBranchesChanged
         AddHandler SelectedItems_.Changed, AddressOf OnSelectedItemsChanged
         AddHandler PreviewKeyDown, AddressOf OnPreviewKeyDown
@@ -119,10 +119,10 @@ Public Class HeaderTreeView
             Return RowHeight
         End Get
     End Property
-    Protected WithEvents mBranches As New BranchCollection(Me)
+    Protected WithEvents Branches_ As New BranchCollection(Me)
     <DesignerSerializationVisibility(DesignerSerializationVisibility.Content)> ReadOnly Property Branches() As BranchCollection
         Get
-            Return mBranches
+            Return Branches_
         End Get
     End Property
     Private mBranchLineStyle As DashStyle = DashStyle.Dash
@@ -197,7 +197,7 @@ Public Class HeaderTreeView
         End Get
         Set( Value As SortType)
             SortType_ = Value
-            mBranches.SortType = SortType_
+            Branches_.SortType = SortType_
             Invalidate()
         End Set
     End Property
@@ -264,13 +264,13 @@ Public Class HeaderTreeView
             Return SelectedItems_
         End Get
     End Property
-    Private WithEvents mSelection As New Dictionary(Of Object, Object)
+    Private WithEvents Selection_ As New Dictionary(Of Object, Object)
     <Browsable(False)> ReadOnly Property Selection() As Dictionary(Of Object, Object)
         Get
-            Return mSelection
+            Return Selection_
         End Get
     End Property
-    Private WithEvents mVisibleBranches As New List(Of Branch)
+    Private WithEvents VisibleBranches_ As New List(Of Branch)
     Private ReadOnly Property VisibleBranches As List(Of Branch)
         Get
             Dim Q_Visible As New List(Of Branch)(From N In Branches.All Where N.Visible AndAlso N.Bounds.Bottom < ClientRectangle.Bottom Order By N.Bounds.Top Ascending Select N)
@@ -297,7 +297,7 @@ Public Class HeaderTreeView
                     Graphics.FillRectangle(Brush, New Rectangle(Header.Bounds.Left, 0, Header.Bounds.Width, ClientSize.Height))
                 End Using
             Else
-                Dim Section As Rectangle = New Rectangle(Header.Bounds.Left, 0, Header.Bounds.Width, BackgroundImage.Height)
+                Dim Section As New Rectangle(Header.Bounds.Left, 0, Header.Bounds.Width, BackgroundImage.Height)
                 Graphics.DrawImage(DrawHeaderImage(CType(BackgroundImage, Bitmap), Section), New Point(Header.Bounds.Left, 0))
                 Using AlphaBrush As New SolidBrush(Color.FromArgb(BackImageAlpha, BackColor))
                     Graphics.FillRectangle(AlphaBrush, New Rectangle(Header.Bounds.Left, 0, Header.Bounds.Width, ClientSize.Height))
@@ -413,7 +413,7 @@ Public Class HeaderTreeView
         Next
     End Sub
     Private Function DrawHeaderImage( Source As Bitmap,  Section As Rectangle) As Bitmap
-        Dim Bitmap As Bitmap = New Bitmap(Section.Width, Section.Height)
+        Dim Bitmap As New Bitmap(Section.Width, Section.Height)
         Using G As Graphics = Graphics.FromImage(Bitmap)
             G.DrawImage(Source, 0, 0, Section, GraphicsUnit.Pixel)
         End Using
@@ -423,7 +423,6 @@ Public Class HeaderTreeView
 #Region " Helper Methods "
     Private Sub UpdateDragImage()
         Dim ItemImage As Image = Nothing, ImageWidth As Integer = 0, Text As String = String.Empty, Font As Font = Nothing
-        Dim Branch As Branch = TryCast(ClickedItem, Branch)
         If TypeOf (ClickedItem) Is Branch Then
             ItemImage = DirectCast(ClickedItem, Branch).Image
             Text = DirectCast(ClickedItem, Branch).Text
@@ -610,10 +609,10 @@ Public Class HeaderTreeView
     End Sub
     Public Sub Clear()
 
-        mVisibleBranches.Clear()
+        VisibleBranches_.Clear()
         SelectedBranches_.Clear()
         SelectedItems_.Clear()
-        mBranches.Clear()
+        Branches_.Clear()
         Invalidate()
 
     End Sub
@@ -1339,28 +1338,28 @@ End Class
     Inherits CollectionBase
 #Region " Constructor "
     Public Sub New( Tree As HeaderTreeView, Optional  Branch As Branch = Nothing, Optional  ImageList As ImageList = Nothing)
-        mTree = Tree
-        mOwner = Branch
-        mImageList = ImageList
+        Tree_ = Tree
+        Owner_ = Branch
+        ImageList_ = ImageList
     End Sub
 #End Region
 #Region " Properties & Fields "
-    Private mTree As HeaderTreeView
+    Private ReadOnly Tree_ As HeaderTreeView
     ReadOnly Property Tree() As HeaderTreeView
         Get
-            Return mTree
+            Return Tree_
         End Get
     End Property
-    Private mOwner As Branch
+    Private ReadOnly Owner_ As Branch
     ReadOnly Property Owner() As Branch
         Get
-            Return mOwner
+            Return Owner_
         End Get
     End Property
-    Private mImageList As ImageList
+    Private ReadOnly ImageList_ As ImageList
     ReadOnly Property ImageList() As ImageList
         Get
-            Return mImageList
+            Return ImageList_
         End Get
     End Property
     Default Property Item( Index As Integer) As Item
@@ -1381,10 +1380,11 @@ End Class
         Return Result
     End Function
     Public Function Add( Text As String, Optional  ForeColor As Color = Nothing, Optional  Image As Image = Nothing) As Item
-        Dim Result As New Item(mOwner)
-        Result.Text = Text
-        Result.ForeColor = ForeColor
-        Result.Image = Image
+        Dim Result As New Item(Owner) With {
+            .Text = Text,
+            .ForeColor = ForeColor,
+            .Image = Image
+        }
         Add(Result)
         Return Result
     End Function
@@ -1416,22 +1416,22 @@ End Class
 End Class
 Public Class Item
 #Region " Constructor "
-    Public Sub New(Optional  Branch As Branch = Nothing, Optional  ForeColor As Color = Nothing)
-        mTree = Branch.Tree
-        mParent = Branch
+    Public Sub New(Optional Branch As Branch = Nothing)
+        Tree_ = Branch.Tree
+        Parent_ = Branch
     End Sub
 #End Region
 #Region " Properties & Fields "
-    Private mTree As HeaderTreeView
+    Private ReadOnly Tree_ As HeaderTreeView
     ReadOnly Property Tree() As HeaderTreeView
         Get
-            Return mTree
+            Return Tree_
         End Get
     End Property
-    Private mParent As Branch
+    Private ReadOnly Parent_ As Branch
     ReadOnly Property Parent() As Branch
         Get
-            Return mParent
+            Return Parent_
         End Get
     End Property
     Private mImage As Image
@@ -1516,7 +1516,6 @@ Public Class Item
             End If
         End Set
     End Property
-    Private mBounds As Rectangle
     ReadOnly Property Bounds() As Rectangle
         Get
             If Parent.Visible Then
@@ -1576,8 +1575,8 @@ Public MustInherit Class Headers
         HScroll.Hide()
         AddHandler VScroll.ValueChanged, AddressOf OnScrollChange
         AddHandler HScroll.ValueChanged, AddressOf OnScrollChange
-        AddHandler mHeaders.Changed, AddressOf OnHeadersChanged
-        AddHandler mHeaders.Clicked, AddressOf OnHeadersClicked
+        AddHandler Headers_.Changed, AddressOf OnHeadersChanged
+        AddHandler Headers_.Clicked, AddressOf OnHeadersClicked
         SetStyle(ControlStyles.AllPaintingInWmPaint, True)
         SetStyle(ControlStyles.ContainerControl, True)
         SetStyle(ControlStyles.DoubleBuffer, True)
@@ -1591,13 +1590,13 @@ Public MustInherit Class Headers
 #End Region
 #Region " Properties & Fields "
     Private AllowPaint As Boolean = True
-    Private Property mHeadersVisible As Boolean = True
+    Private Property HeadersVisible_ As Boolean = True
     Property HeadersVisible() As Boolean
         Get
-            Return mHeadersVisible
+            Return HeadersVisible_
         End Get
         Set( Value As Boolean)
-            mHeadersVisible = Value
+            HeadersVisible_ = Value
         End Set
     End Property
     Public ReadOnly Property HeaderHeight As Integer
@@ -1607,7 +1606,7 @@ Public MustInherit Class Headers
             If Not Q_Image.Count = 0 Then
                 If Q_Image.Max + 6 > HeaderHeight Then HeaderHeight = Q_Image.Max + 6
             End If
-            Return If(mHeadersVisible, HeaderHeight, 1)
+            Return If(HeadersVisible_, HeaderHeight, 1)
         End Get
     End Property
     Private mSelectedColor As Color = Color.WhiteSmoke
@@ -1682,16 +1681,16 @@ Public MustInherit Class Headers
             End If
         End Set
     End Property
-    Private WithEvents mHeaders As New HeaderCollection
+    Private WithEvents Headers_ As New HeaderCollection
     <DesignerSerializationVisibility(DesignerSerializationVisibility.Content)> ReadOnly Property Headers() As HeaderCollection
         Get
-            Return mHeaders
+            Return Headers_
         End Get
     End Property
     Private ReadOnly Property TotalWidth() As Integer
         Get
             TotalWidth = 2
-            For Each Header As Header In mHeaders
+            For Each Header As Header In Headers_
                 TotalWidth += Header.Width
             Next
             If VScroll.Visible Then TotalWidth += VScroll.Width
@@ -1720,7 +1719,7 @@ Public MustInherit Class Headers
         Invalidate()
         RaiseEvent HeadersChanged(sender, e)
         Dim PrevColWidths As Integer = 1
-        For Each Header As Header In mHeaders
+        For Each Header As Header In Headers
             Header.Bounds = New Rectangle(PrevColWidths - HScroll.Value, 1, Header.Width, HeaderHeight)
             PrevColWidths += Header.Width
         Next
@@ -1816,7 +1815,7 @@ Public MustInherit Class Headers
             Dim Descending As String = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAOwwAADsMBx2+oZAAAAHtJREFUOE/FkU0KgCAUBu3+h3IV2EIQEUUUf05iL40i08BFOOsZ/PAtKSU0BARDoCH7mDMpwBj3Xm5MAjuE0GvqgBACtnPOGNNsHgFjLMZYbK21lPLd3EGxvffWWrCVUkIIznnVnAHYAKV0y8CwNQN24fqDWXf4OP//k3bpJLwlth796QAAAABJRU5ErkJggg=="
             Dim Sort As String = Ascending
             Dim AllHeadersWidth As Integer = 1
-            For Each Header As Header In mHeaders
+            For Each Header As Header In Headers
                 Dim HeaderImageWidth As Integer = 0, HeaderImageHeight As Integer = 0
                 Using HatchBrush As New HatchBrush(mHeaderHatchStyle, mHeaderHatchColor, mHeaderBackColor)
                     g.FillRectangle(HatchBrush, Header.Bounds)
@@ -1862,7 +1861,7 @@ Public MustInherit Class Headers
     Private ColSizeHover As Boolean = False
     Private ColStartDrag As Integer
     Private OrigColWidth As Integer
-    Private ReadOnly ToolTip As ToolTip = New ToolTip
+    Private ReadOnly ToolTip As New ToolTip
     Protected Overrides Sub OnMouseMove( e As MouseEventArgs)
         MyBase.OnMouseMove(e)
         If e.Button = MouseButtons.Left AndAlso ColSizeHover AndAlso Not IsNothing(TheHeader) Then
@@ -1872,7 +1871,7 @@ Public MustInherit Class Headers
             MyBase.Refresh()
             Invalidate()
         ElseIf HeadersVisible Then
-            For Each Header As Header In mHeaders
+            For Each Header As Header In Headers
                 If ((e.X >= Header.Bounds.Right - 4) AndAlso (e.X <= Header.Bounds.Right + 4)) AndAlso (e.Y <= HeaderHeight) AndAlso Header.Resizeable Then
                     Cursor = Cursors.VSplit
                     If Header.Resizeable Then
@@ -1895,7 +1894,7 @@ Public MustInherit Class Headers
                     ColStartDrag = e.X
                     OrigColWidth = TheHeader.Width
                 Else
-                    Dim ClickedHeader As IEnumerable(Of Header) = (From A In mHeaders Where e.X >= DirectCast(A, Header).Bounds.Left _
+                    Dim ClickedHeader As IEnumerable(Of Header) = (From A In Headers Where e.X >= DirectCast(A, Header).Bounds.Left _
                                                    And e.X <= DirectCast(A, Header).Bounds.Right Select DirectCast(A, Header))
                     If ClickedHeader.Count = 0 Then
                         OnHeadersClicked(Nothing)

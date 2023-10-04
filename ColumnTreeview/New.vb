@@ -4,6 +4,7 @@ Imports System.Windows.Forms
 Imports System.Drawing
 Imports System.Drawing.Drawing2D
 Imports System.ComponentModel
+Imports Gma.System.MouseKeyHook
 Imports Controls
 
 Public Enum MouseRegion
@@ -460,7 +461,7 @@ Public Class TreeViewer
     Private Sub NodeEditingOptions_Opening() Handles TSMI_NodeEditing.DropDownOpening
         Karen.Subscribe()
     End Sub
-    Private Sub Hook_Moused() Handles Karen.Moused
+    Private Sub Hook_Moused(sender As Object, e As MouseEventExtArgs) Handles Karen.Moused
 
         Dim CoCOptions As String = If(CursorOverControl(TSDD_Options), "[Y]", "[N]") & " TSDD_Options"
         Dim CoCNodeEdit As String = If(CursorOverControl(IC_NodeEdit), "[Y]", "[N]") & " IC_NodeEdit"
@@ -1259,7 +1260,7 @@ Public Class TreeViewer
                                         Return CBool(xValue).CompareTo(CBool(yValue))
 
                                     Case AlignFormat.TypeGroup.Strings
-                                        Return xValue.ToString.CompareTo(yValue.ToString)
+                                        Return If(xValue, String.Empty).ToString().CompareTo(If(yValue, String.Empty).ToString())
 
                                     Case Else
                                         'AlignFormat.TypeGroup.Images, AlignFormat.TypeGroup.None
@@ -1282,7 +1283,7 @@ Public Class TreeViewer
                                         Return CBool(xValue).CompareTo(CBool(yValue))
 
                                     Case AlignFormat.TypeGroup.Strings
-                                        Return xValue.ToString.CompareTo(yValue.ToString)
+                                        Return If(xValue, String.Empty).ToString().CompareTo(If(yValue, String.Empty).ToString())
 
                                     Case Else
                                         'AlignFormat.TypeGroup.Images, AlignFormat.TypeGroup.None
@@ -1688,7 +1689,6 @@ Public Class TreeViewer
                                 End If
                                 If .HasChildren Then e.Graphics.DrawImage(If(.Expanded, CollapseImage, ExpandImage), .Bounds_ShowHide)
                                 If .CanFavorite Then e.Graphics.DrawImage(If(.Favorite, My.Resources.star, My.Resources.starEmpty), .Bounds_Favorite)
-
                                 If .TipText IsNot Nothing Then
                                     Dim triangleHeight As Single = 8
                                     Dim trianglePoints As New List(Of PointF) From {
@@ -2077,32 +2077,31 @@ Public Class TreeViewer
     Private Sub Columns_SetBounds()
 
         ColumnHeaders.Draw.Clear()
-        ColumnHeaders.ForEach(Sub(headers)
-                                  Dim rollingLeft As Integer = -HScroll.Value
-                                  For Each header As ColumnHead In headers.Where(Function(h) h.Visible)
-                                      With header
-                                          Dim freezeColumn As Boolean = FreezeRoot And .Index = 0
-                                          Dim offsetFreeze As Integer = If(freezeColumn, HScroll.Value, 0)
-                                          Dim textWidth As Integer = .TextSize.Width
-                                          .Bounds_Image = If(.Image Is Nothing,
-             New Rectangle(rollingLeft + offsetFreeze, 0, 0, headers.Height),
-             New Rectangle(rollingLeft + offsetFreeze, CInt((headers.Height - .Image.Height) / 2), 2 + .Image.Width + 1, .Image.Height))
-                                          Dim widthProposed As Integer = .Bounds_Image.Width
-                                          If .SortIcon Is Nothing Then
-                                              widthProposed += { .ContentWidth, textWidth}.Max
-                                              .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed, 0, 0, 0)
-                                              'If .Name.ToLowerInvariant = "net" Then Stop
-                                          Else
-                                              widthProposed += If(.ContentWidth - textWidth > .SortIcon.Width, .ContentWidth, textWidth + 2 + .SortIcon.Width + 2)
-                                              .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed - .SortIcon.Width, CInt((headers.Height - .SortIcon.Height) / 2), .SortIcon.Width, .SortIcon.Height)
-                                          End If
-                                          .Bounds_Text = New Rectangle(.Bounds_Image.Right, 0, .Bounds_Sort.Left - .Bounds_Image.Right, headers.Height)
-                                          .Bounds = New Rectangle(rollingLeft + offsetFreeze, 0, widthProposed, headers.Height)
-                                          If freezeColumn Or .Bounds.Right > 0 And rollingLeft < Width Then ColumnHeaders.Draw.Add(header)
-                                          rollingLeft += .Bounds.Width
-                                      End With
-                                  Next
-                              End Sub)
+        For Each hdrGrp In ColumnHeaders
+            Dim rollingLeft As Integer = -HScroll.Value
+            For Each header As ColumnHead In hdrGrp.Where(Function(h) h.Visible)
+                With header
+                    Dim freezeColumn As Boolean = FreezeRoot And .Index = 0
+                    Dim offsetFreeze As Integer = If(freezeColumn, HScroll.Value, 0)
+                    Dim textWidth As Integer = .TextSize.Width
+                    .Bounds_Image = If(.Image Is Nothing,
+New Rectangle(rollingLeft + offsetFreeze, 0, 0, hdrGrp.Height),
+New Rectangle(rollingLeft + offsetFreeze, CInt((hdrGrp.Height - .Image.Height) / 2), 2 + .Image.Width + 1, .Image.Height))
+                    Dim widthProposed As Integer = .Bounds_Image.Width
+                    If .SortIcon Is Nothing Then
+                        widthProposed += { .ContentWidth, textWidth}.Max
+                        .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed, 0, 0, 0)
+                    Else
+                        widthProposed += If(.ContentWidth - textWidth > .SortIcon.Width, .ContentWidth, textWidth + 2 + .SortIcon.Width + 2)
+                        .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed - .SortIcon.Width, CInt((hdrGrp.Height - .SortIcon.Height) / 2), .SortIcon.Width, .SortIcon.Height)
+                    End If
+                    .Bounds_Text = New Rectangle(.Bounds_Image.Right, 0, .Bounds_Sort.Left - .Bounds_Image.Right, hdrGrp.Height)
+                    .Bounds = New Rectangle(rollingLeft + offsetFreeze, 0, widthProposed, hdrGrp.Height)
+                    If freezeColumn Or .Bounds.Right > 0 And rollingLeft < Width Then ColumnHeaders.Draw.Add(header)
+                    rollingLeft += .Bounds.Width
+                End With
+            Next
+        Next
         ColumnHeaders.Draw.Sort(Function(x, y)
                                     Return y.Index.CompareTo(x.Index)
                                 End Function)
@@ -2111,23 +2110,23 @@ Public Class TreeViewer
     Private Sub RefreshNodesBounds_Lines(Nodes As NodeCollection)
 
         NodeIndex = 0
-        Nodes.ForEach(Sub(node)
-                          With node
-                              ._Index = NodeIndex
-                              ._Visible = .Parent Is Nothing OrElse .Parent.Expanded
-                              If .Visible Then
-                                  Node_SetBounds(node)
-                                  ._VisibleIndex = VisibleIndex
-                                  VisibleIndex += 1
-                                  If .Bounds_Text.Right > RollingWidth Then RollingWidth = .Bounds_Text.Right
-                                  RollingHeight += .Height
-                                  If .HasChildren Then RefreshNodesBounds_Lines(.Children)
-                              End If
-                              NodeIndex += 1
-                          End With
-                          '/// Test
-                          If FavoritesFirst And node.CanFavorite Then node.Children.SortAscending(False) 'Do not let the Sort require repaint as it cycles back here to an infinate loop
-                      End Sub)
+        For Each node In Nodes
+            With node
+                ._Index = NodeIndex
+                ._Visible = .Header.Visible And (.Parent Is Nothing OrElse .Parent.Expanded)
+                If .Visible Then
+                    Node_SetBounds(node)
+                    ._VisibleIndex = VisibleIndex
+                    VisibleIndex += 1
+                    If .Bounds_Text.Right > RollingWidth Then RollingWidth = .Bounds_Text.Right
+                    RollingHeight += .Height
+                    If .HasChildren Then RefreshNodesBounds_Lines(.Children)
+                End If
+                NodeIndex += 1
+            End With
+            '/// Do not let the Sort require repaint as it cycles back here to an infinate loop
+            If FavoritesFirst And node.CanFavorite Then node.Children.SortAscending(False)
+        Next
 
     End Sub
     Private Sub Node_SetBounds(node As Node)
@@ -2315,7 +2314,6 @@ Public Class TreeViewer
 
     End Sub
 #End Region
-
     Public Function HitTest(Location As Point) As HitRegion
 
         Dim hotSpot As New HitRegion
@@ -3044,8 +3042,6 @@ Public Class Node
     Private Sub TextWidth_Set()
 
         _TextWidth = 3 + MeasureText(Text, Font).Width 'TextRenderer.MeasureText(If(Text, String.Empty), Font).Width 'MeasureText(Text, Font).Width
-        'Dim kvp = Column.Get_kvpFormat(DataType)
-        'If Text = "$282,800.00" Then Stop
         _Bounds_Text.Width = TextWidth
         RequiresRepaint()
 

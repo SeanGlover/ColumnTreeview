@@ -49,7 +49,7 @@
       <HintPath>..\..\Controls\bin\Debug\Controls.dll</HintPath>
     </Reference>
     <Reference Include="Gma.System.MouseKeyHook">
-      <HintPath>..\..\..\..\..\Desktop\Gma.System.MouseKeyHook.dll</HintPath>
+      <HintPath>..\..\Controls\bin\Debug\Gma.System.MouseKeyHook.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -73,6 +73,7 @@
     <Import Include="System.Threading.Tasks" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Hooker.vb" />
     <Compile Include="Old.vb">
       <SubType>Component</SubType>
     </Compile>

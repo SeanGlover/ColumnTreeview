@@ -2096,7 +2096,7 @@ New Rectangle(rollingLeft + offsetFreeze, CInt((hdrGrp.Height - .Image.Height) /
                         .Bounds_Sort = New Rectangle(rollingLeft + offsetFreeze + widthProposed - .SortIcon.Width, CInt((hdrGrp.Height - .SortIcon.Height) / 2), .SortIcon.Width, .SortIcon.Height)
                     End If
                     .Bounds_Text = New Rectangle(.Bounds_Image.Right, 0, .Bounds_Sort.Left - .Bounds_Image.Right, hdrGrp.Height)
-                    .Bounds = New Rectangle(rollingLeft + offsetFreeze, 0, widthProposed, hdrGrp.Height)
+                    .Bounds = New Rectangle(rollingLeft + offsetFreeze, 0, 2 + widthProposed + 2, hdrGrp.Height)
                     If freezeColumn Or .Bounds.Right > 0 And rollingLeft < Width Then ColumnHeaders.Draw.Add(header)
                     rollingLeft += .Bounds.Width
                 End With

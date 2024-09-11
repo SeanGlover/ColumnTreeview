@@ -281,11 +281,11 @@ Public Class HeaderTreeView
 #Region " Drawing "
     Protected Overrides Sub DrawItems( Graphics As Graphics,  Rect As Rectangle)
 
-        If Headers.Any Then
+        If Headers.Any() Then
             DrawBranches(Graphics)
             If mGridLines Then DrawGridLines(Graphics)
         Else
-            Stop
+
         End If
 
     End Sub
@@ -364,7 +364,6 @@ Public Class HeaderTreeView
             Next
         Next
         TotalHeight = If(VisibleBranches.Any, VisibleBranches.Count * RowHeight, 0) + 2
-        Stop
 
     End Sub
     Private Sub DrawSelection( Graphics As Graphics,  Rect As Rectangle,  Color As Color)
@@ -935,25 +934,12 @@ End Class
             Next
         End Set
     End Property
-
-    'Public Overloads Function Add(Name As String, Text As String, Checked As Boolean, Image As Image) As Branch
-    '    Return Add(New Branch With {.Name = Name, .Text = Text, .Checked = Checked, .Image = Image})
-    'End Function
-    'Public Overloads Function Add(Name As String, Text As String, Checked As Boolean) As Branch
-    '    Return Add(New Branch With {.Name = Name, .Text = Text, .Checked = Checked})
-    'End Function
     Public Overloads Function Add(Name As String, Text As String, Image As Image) As Branch
         Return Add(New Branch With {.Name = Name, .Text = Text, .Image = Image})
     End Function
     Public Overloads Function Add(Name As String, Text As String) As Branch
         Return Add(New Branch With {.Name = Name, .Text = Text})
     End Function
-    'Public Overloads Function Add(Text As String, Checked As Boolean, Image As Image) As Branch
-    '    Return Add(New Branch With {.Text = Text, .Checked = Checked, .Image = Image})
-    'End Function
-    'Public Overloads Function Add(Text As String, Checked As Boolean) As Branch
-    '    Return Add(New Branch With {.Text = Text, .Checked = Checked})
-    'End Function
     Public Overloads Function Add(Text As String, Image As Image) As Branch
         Return Add(New Branch With {.Text = Text, .Image = Image})
     End Function
